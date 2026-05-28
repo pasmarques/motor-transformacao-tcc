@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.eggs/
+dist/
+build/
+.Python
+
+# Ambientes virtuais
+venv/
+.venv/
+env/
+.env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Outputs gerados pelo motor (não versionar CSVs de saída)
+saida_gerada.csv
+saida_com_perfil_cortada.csv
+dataset_transformado.csv
+
+# Arquivos temporários do sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Credenciais / variáveis de ambiente
+.env
+*.env
+secrets.json

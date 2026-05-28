@@ -1,0 +1,246 @@
+{
+  "patient_id": 999001,
+  "data_referencia": "2120-01-05T08:00:00",
+  "perfil": {
+    "sexo": "F",
+    "idade": 65,
+    "peso_kg": 70,
+    "altura_cm": 165
+  },
+  "internacao": {
+    "data_admissao_uti": "2120-01-01T08:00:00",
+    "data_alta_uti": "2120-01-05T08:00:00",
+    "data_obito": null
+  },
+  "configuracao_processamento": {
+    "tamanho_janela_horas": 24,
+    "cortar_janelas_finais": 0,
+    "max_janelas": null
+  },
+  "mapas_diarios": [
+    {
+      "dia": 1,
+      "inicio": "2120-01-01T08:00:00",
+      "fim": "2120-01-02T08:00:00",
+      "balanco_hidrico": {
+        "saldo": -800
+      },
+      "evacuacao": {
+        "quantidade": 1
+      },
+      "nutricao": {
+        "calorias_kcal": 0,
+        "proteinas_g": 0
+      },
+      "ventilacao_mecanica": {
+        "em_uso": true
+      },
+      "hemodialise": {
+        "presente": false
+      },
+      "drogas_vasoativas": {
+        "noradrenalina": {
+          "dose_maxima": 0.1
+        },
+        "vasopressina": {
+          "em_uso": false
+        }
+      },
+      "sinais_vitais": {
+        "temperatura": [37.2, 38.4],
+        "hgt": [92, 210],
+        "pas": [95, 130],
+        "pad": [55, 75],
+        "pam": [62, 82]
+      },
+      "laboratorio": {
+        "ph": [7.32, 7.41],
+        "ureia": [45],
+        "creatinina": [1.0],
+        "sodio": [136],
+        "potassio": [4.2],
+        "magnesio": [1.8],
+        "fosforo": [2.4],
+        "albumina": [3.1],
+        "linfocitos_totais": [760],
+        "hemoglobina": [11.2],
+        "ast": [30],
+        "alt": [28],
+        "bilirrubina": [0.8],
+        "triglicerides": [120],
+        "fosfatase_alcalina": [100],
+        "wbc": [9.5],
+        "plaquetas": [180],
+        "lactato": [2.1]
+      }
+    },
+    {
+      "dia": 2,
+      "inicio": "2120-01-02T08:00:00",
+      "fim": "2120-01-03T08:00:00",
+      "balanco_hidrico": {
+        "saldo": 300
+      },
+      "evacuacao": {
+        "quantidade": 4
+      },
+      "nutricao": {
+        "calorias_kcal": 900,
+        "proteinas_g": 45
+      },
+      "ventilacao_mecanica": {
+        "em_uso": true
+      },
+      "hemodialise": {
+        "presente": false
+      },
+      "drogas_vasoativas": {
+        "noradrenalina": {
+          "dose_maxima": 0.3
+        },
+        "vasopressina": {
+          "em_uso": true
+        }
+      },
+      "sinais_vitais": {
+        "temperatura": [36.8, 37.6],
+        "hgt": [75, 160],
+        "pas": [105, 145],
+        "pad": [65, 92],
+        "pam": [70, 88]
+      },
+      "laboratorio": {
+        "ph": [7.37, 7.48],
+        "ureia": [52],
+        "creatinina": [1.4],
+        "sodio": [146],
+        "potassio": [5.8],
+        "magnesio": [2.7],
+        "fosforo": [2.1],
+        "albumina": [3.4],
+        "linfocitos_totais": [820],
+        "hemoglobina": [12.1],
+        "ast": [70],
+        "alt": [45],
+        "bilirrubina": [1.4],
+        "triglicerides": [160],
+        "fosfatase_alcalina": [130],
+        "wbc": [12.2],
+        "plaquetas": [145],
+        "lactato": [3.0]
+      }
+    },
+    {
+      "dia": 3,
+      "inicio": "2120-01-03T08:00:00",
+      "fim": "2120-01-04T08:00:00",
+      "balanco_hidrico": {
+        "saldo": 0
+      },
+      "evacuacao": {
+        "quantidade": 0
+      },
+      "nutricao": {
+        "calorias_kcal": 1200,
+        "proteinas_g": 60
+      },
+      "ventilacao_mecanica": {
+        "em_uso": false
+      },
+      "hemodialise": {
+        "presente": true
+      },
+      "drogas_vasoativas": {
+        "noradrenalina": {
+          "dose_maxima": 0
+        },
+        "vasopressina": {
+          "em_uso": false
+        }
+      },
+      "sinais_vitais": {
+        "temperatura": [36.5, 37.1],
+        "hgt": [65, 140],
+        "pas": [110, 138],
+        "pad": [70, 84],
+        "pam": [66, 78]
+      },
+      "laboratorio": {
+        "ph": [7.36, 7.43],
+        "ureia": [38],
+        "creatinina": [1.0],
+        "sodio": [134],
+        "potassio": [2.9],
+        "magnesio": [1.5],
+        "fosforo": [1.8],
+        "albumina": [3.6],
+        "linfocitos_totais": [900],
+        "hemoglobina": [12.5],
+        "ast": [34],
+        "alt": [29],
+        "bilirrubina": [1.0],
+        "triglicerides": [110],
+        "fosfatase_alcalina": [105],
+        "wbc": [3.7],
+        "plaquetas": [170],
+        "lactato": [1.8]
+      }
+    },
+    {
+      "dia": 4,
+      "inicio": "2120-01-04T08:00:00",
+      "fim": "2120-01-05T08:00:00",
+      "balanco_hidrico": {
+        "saldo": 500
+      },
+      "evacuacao": {
+        "quantidade": 5
+      },
+      "nutricao": {
+        "calorias_kcal": 1500,
+        "proteinas_g": 70
+      },
+      "ventilacao_mecanica": {
+        "em_uso": false
+      },
+      "hemodialise": {
+        "presente": false
+      },
+      "drogas_vasoativas": {
+        "noradrenalina": {
+          "dose_maxima": 0.6
+        },
+        "vasopressina": {
+          "em_uso": false
+        }
+      },
+      "sinais_vitais": {
+        "temperatura": [36.9, 37.4],
+        "hgt": [90, 150],
+        "pas": [118, 136],
+        "pad": [68, 82],
+        "pam": [72, 86]
+      },
+      "laboratorio": {
+        "ph": [7.39, 7.44],
+        "ureia": [35],
+        "creatinina": [0.9],
+        "sodio": [139],
+        "potassio": [4.1],
+        "magnesio": [1.9],
+        "fosforo": [2.6],
+        "albumina": [3.8],
+        "linfocitos_totais": [1000],
+        "hemoglobina": [12.8],
+        "ast": [32],
+        "alt": [27],
+        "bilirrubina": [0.9],
+        "triglicerides": [105],
+        "fosfatase_alcalina": [90],
+        "wbc": [8.8],
+        "plaquetas": [190],
+        "lactato": [1.6]
+      }
+    }
+  ]
+}

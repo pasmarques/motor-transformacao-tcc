@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Motor de Transformação MIMIC-IV — Bloco 2</title>
+<style>
+  :root {
+    --bg:        #f4f6f9;
+    --surface:   #ffffff;
+    --sidebar:   #1e2a3a;
+    --sidebar2:  #253447;
+    --accent:    #3b82f6;
+    --accent2:   #1d4ed8;
+    --green:     #10b981;
+    --yellow:    #f59e0b;
+    --red:       #ef4444;
+    --text:      #111827;
+    --muted:     #6b7280;
+    --border:    #e5e7eb;
+    --radius:    8px;
+    --mono:      'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: 300px;
+    min-width: 300px;
+    background: var(--sidebar);
+    color: #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 0 0 24px 0;
+  }
+
+  #sidebar-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid #2d3f54;
+  }
+  #sidebar-header h1 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.3;
+  }
+  #sidebar-header .badge {
+    display: inline-block;
+    margin-top: 6px;
+    background: #1d4ed8;
+    color: #bfdbfe;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .sidebar-section {
+    padding: 16px 20px 4px;
+    border-bottom: 1px solid #2d3f54;
+  }
+  .sidebar-section:last-child { border-bottom: none; }
+
+  .sidebar-section label.group-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 10px;
+  }
+
+  .field { margin-bottom: 12px; }
+  .field label {
+    display: block;
+    font-size: 0.75rem;
+    color: #cbd5e1;
+    margin-bottom: 4px;
+  }
+  .field input[type=text],
+  .field input[type=number],
+  .field textarea,
+  .field select {
+    width: 100%;
+    background: #2d3f54;
+    border: 1px solid #3d5068;
+    color: #e2e8f0;
+    border-radius: 5px;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    outline: none;
+  }
+  .field input:focus,
+  .field textarea:focus { border-color: var(--accent); }
+  .field textarea { resize: vertical; font-family: var(--mono); font-size: 0.72rem; }
+
+  .radio-group { display: flex; flex-direction: column; gap: 6px; }
+  .radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: #cbd5e1;
+    cursor: pointer;
+  }
+  .radio-group input[type=radio] { accent-color: var(--accent); }
+
+  #btn-executar {
+    margin: 16px 20px 0;
+    width: calc(100% - 40px);
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 10px 0;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #btn-executar:hover { background: var(--accent2); }
+  #btn-executar:disabled { background: #3d5068; cursor: not-allowed; }
+
+  .arch-hint {
+    margin: 10px 20px 0;
+    font-size: 0.68rem;
+    color: #64748b;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  /* ── MAIN ── */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* topbar */
+  #topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  #topbar .arch-flow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .arch-step {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.7rem;
+  }
+  .arch-step.dim    { background: #f1f5f9; color: #94a3b8; }
+  .arch-step.active { background: #dbeafe; color: #1d4ed8; }
+  .arch-step.done   { background: #d1fae5; color: #065f46; }
+  .arch-arrow { color: #d1d5db; font-size: 0.8rem; }
+  #status-badge {
+    margin-left: auto;
+    font-size: 0.73rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+  .badge-idle    { background: #f1f5f9; color: #64748b; }
+  .badge-running { background: #fef3c7; color: #92400e; }
+  .badge-ok      { background: #d1fae5; color: #065f46; }
+  .badge-err     { background: #fee2e2; color: #991b1b; }
+
+  /* content */
+  #content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+  }
+
+  /* estado vazio */
+  #empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--muted);
+    gap: 12px;
+  }
+  #empty-state .icon { font-size: 3rem; }
+  #empty-state p { font-size: 0.88rem; }
+
+  /* metricas */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .metric-card .label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+  .metric-card .value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .metric-card .sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+  /* tabs */
+  .tabs { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
+  .tab-btn {
+    padding: 8px 18px;
+    background: none;
+    border: none;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn:hover  { color: var(--text); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* tabela */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    max-height: 400px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+  }
+  thead th {
+    background: #f8fafc;
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+  }
+  tbody tr:nth-child(even) { background: #fafafa; }
+  tbody td {
+    padding: 6px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: nowrap;
+    color: var(--text);
+  }
+
+  /* json viewer */
+  .json-viewer {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    line-height: 1.6;
+    overflow: auto;
+    max-height: 420px;
+  }
+  .json-viewer .jk { color: #7dd3fc; }
+  .json-viewer .jv-str { color: #86efac; }
+  .json-viewer .jv-num { color: #fda4af; }
+  .json-viewer .jv-bool { color: #c4b5fd; }
+  .json-viewer .jv-null { color: #94a3b8; }
+
+  /* selectores paciente */
+  .patient-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .patient-selector label { font-size: 0.8rem; color: var(--muted); }
+  .patient-selector select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    color: var(--text);
+  }
+
+  /* validacao */
+  .val-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .val-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .val-card .vl { font-size: 1.5rem; font-weight: 700; }
+  .val-card .vt { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+  .val-card.green { border-color: #a7f3d0; background: #f0fdf4; }
+  .val-card.green .vl { color: var(--green); }
+  .val-card.red   { border-color: #fecaca; background: #fff1f2; }
+  .val-card.red   .vl { color: var(--red); }
+
+  .diag-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--yellow);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    font-size: 0.78rem;
+    line-height: 1.6;
+  }
+  .diag-block strong { color: var(--text); }
+
+  .report-raw {
+    background: #0f172a;
+    color: #94a3b8;
+    border-radius: var(--radius);
+    padding: 14px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    line-height: 1.5;
+    overflow: auto;
+    max-height: 200px;
+  }
+
+  .download-row { display: flex; gap: 10px; margin-top: 12px; }
+  .btn-dl {
+    padding: 7px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-dl:hover { background: var(--bg); }
+
+  .alert-info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 0.78rem;
+    color: #1e40af;
+    margin-bottom: 16px;
+  }
+
+  /* spinner */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 3px solid #bfdbfe;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<aside id="sidebar">
+  <div id="sidebar-header">
+    <h1>Motor de Transformação<br>MIMIC-IV</h1>
+    <span class="badge">Bloco 2 — Protótipo</span>
+  </div>
+
+  <!-- Entrada -->
+  <div class="sidebar-section">
+    <label class="group-label">Entrada</label>
+    <div class="field">
+      <label>Pasta de mapas diários</label>
+      <input type="text" id="inp-entradas" value="entradas" />
+    </div>
+    <div class="field">
+      <label>Paciente específico (opcional)</label>
+      <input type="text" id="inp-subject" placeholder="ex: 12925639" />
+    </div>
+  </div>
+
+  <!-- Perfil -->
+  <div class="sidebar-section">
+    <label class="group-label">Perfil &amp; Internação</label>
+    <div class="radio-group field">
+      <label>
+        <input type="radio" name="perfil" value="mock" checked />
+        Com mock do Bloco 1
+      </label>
+      <label>
+        <input type="radio" name="perfil" value="sem" />
+        Sem perfil
+      </label>
+    </div>
+    <div class="field" id="field-mock-file">
+      <label>Arquivo de perfil (mock)</label>
+      <input type="text" id="inp-mock" value="ICUpatients21D.csv" />
+    </div>
+  </div>
+
+  <!-- Janela -->
+  <div class="sidebar-section">
+    <label class="group-label">Janela de Observação</label>
+    <div class="field">
+      <label>Cortar janelas finais</label>
+      <input type="number" id="inp-cortar" value="1" min="0" />
+    </div>
+    <div class="field">
+      <label>Máximo de janelas</label>
+      <input type="number" id="inp-maxjan" placeholder="sem limite" min="1" />
+    </div>
+    <div class="field">
+      <label>Data de referência (opcional)</label>
+      <input type="text" id="inp-dataref" placeholder="YYYY-MM-DD" />
+    </div>
+  </div>
+
+  <!-- Saída -->
+  <div class="sidebar-section">
+    <label class="group-label">Variáveis de Saída</label>
+    <div class="radio-group field">
+      <label>
+        <input type="radio" name="variaveis" value="todas" checked />
+        Todas do PDF
+      </label>
+      <label>
+        <input type="radio" name="variaveis" value="sem-meta" />
+        Sem metadados auxiliares
+      </label>
+    </div>
+    <div class="field">
+      <label>Agregações extras (origem:func:nome)</label>
+      <textarea id="inp-agregacoes" rows="3"
+        placeholder="creatinina:max:creatinina_max&#10;albumina:min:albumina_min"></textarea>
+    </div>
+  </div>
+
+  <button id="btn-executar" onclick="executar()">▶ Executar Transformação</button>
+  <p class="arch-hint">
+    Frontend HTML → API Flask (porta 5050)<br>→ Motor Python (Bloco 2)
+  </p>
+</aside>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main id="main">
+
+  <!-- topbar com pipeline -->
+  <div id="topbar">
+    <div class="arch-flow" id="arch-flow">
+      <span class="arch-step dim" id="step-entradas">Entradas CSV</span>
+      <span class="arch-arrow">→</span>
+      <span class="arch-step dim" id="step-adaptador">Adaptador JSON</span>
+      <span class="arch-arrow">→</span>
+      <span class="arch-step active" id="step-bloco2">Bloco 2</span>
+      <span class="arch-arrow">→</span>
+      <span class="arch-step dim" id="step-saida">Saída</span>
+      <span class="arch-arrow">→</span>
+      <span class="arch-step dim" id="step-validacao">Validação</span>
+    </div>
+    <span id="status-badge" class="badge-idle">Aguardando execução</span>
+  </div>
+
+  <!-- conteúdo -->
+  <div id="content">
+    <div id="empty-state">
+      <div class="icon">⚗️</div>
+      <p>Configure os parâmetros e clique em <strong>Executar Transformação</strong></p>
+      <p style="font-size:0.75rem; color:#9ca3af">
+        Certifique-se de que a API está rodando: <code>python app/api.py</code>
+      </p>
+    </div>
+
+    <div id="results" style="display:none">
+
+      <!-- métricas resumo -->
+      <div class="metrics-row" id="metrics-row"></div>
+
+      <!-- tabs -->
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('resultado')">📊 Resultado</button>
+        <button class="tab-btn" onclick="switchTab('json')">{ } JSON</button>
+        <button class="tab-btn" onclick="switchTab('validacao')">✓ Validação</button>
+      </div>
+
+      <!-- TAB: Resultado -->
+      <div class="tab-panel active" id="tab-resultado">
+        <div class="table-wrap" id="tabela-wrap"></div>
+        <div class="download-row">
+          <a id="btn-csv" class="btn-dl" href="#" download="dataset_transformado.csv">
+            ⬇ Baixar CSV
+          </a>
+        </div>
+      </div>
+
+      <!-- TAB: JSON -->
+      <div class="tab-panel" id="tab-json">
+        <div class="patient-selector">
+          <label>Paciente:</label>
+          <select id="sel-paciente" onchange="mostrarJson()"></select>
+        </div>
+        <div class="json-viewer" id="json-viewer"></div>
+      </div>
+
+      <!-- TAB: Validação -->
+      <div class="tab-panel" id="tab-validacao">
+        <div id="val-content"></div>
+      </div>
+
+    </div><!-- /results -->
+  </div><!-- /content -->
+</main>
+
+<script>
+const API = "http://localhost:5050/api";
+let _estado = null;
+
+// toggle mock file
+document.querySelectorAll('input[name="perfil"]').forEach(r =>
+  r.addEventListener("change", () => {
+    document.getElementById("field-mock-file").style.display =
+      r.value === "mock" && r.checked ? "block" : (
+        document.querySelector('input[name="perfil"]:checked').value === "mock" ? "block" : "none"
+      );
+  })
+);
+
+function setStatus(cls, txt) {
+  const b = document.getElementById("status-badge");
+  b.className = cls;
+  b.textContent = txt;
+}
+
+function setStep(id, cls) {
+  ["entradas","adaptador","bloco2","saida","validacao"].forEach(s => {
+    document.getElementById("step-" + s).className = "arch-step " +
+      (s === id ? cls : (document.getElementById("step-" + s).className.includes("done") ? "done" : "dim"));
+  });
+}
+
+function activatePipeline() {
+  ["entradas","adaptador","bloco2","saida","validacao"].forEach((s, i) => {
+    setTimeout(() => {
+      document.getElementById("step-" + s).className = "arch-step done";
+    }, i * 200);
+  });
+}
+
+async function executar() {
+  const btn = document.getElementById("btn-executar");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Executando...';
+  setStatus("badge-running", "Transformando...");
+
+  document.getElementById("empty-state").style.display = "none";
+  document.getElementById("results").style.display = "none";
+
+  const perfilMode = document.querySelector('input[name="perfil"]:checked').value;
+  const varMode    = document.querySelector('input[name="variaveis"]:checked').value;
+
+  const payload = {
+    entradas_dir:         document.getElementById("inp-entradas").value,
+    subject_id:           document.getElementById("inp-subject").value,
+    patient_info_file:    perfilMode === "mock" ? document.getElementById("inp-mock").value : null,
+    cortar_janelas_finais: parseInt(document.getElementById("inp-cortar").value || "0"),
+    max_janelas:          document.getElementById("inp-maxjan").value || null,
+    data_referencia:      document.getElementById("inp-dataref").value || null,
+    sem_metadados:        varMode === "sem-meta",
+    agregacoes:           document.getElementById("inp-agregacoes").value,
+  };
+
+  try {
+    const resp = await fetch(`${API}/transform`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.erro || "Erro desconhecido");
+    }
+
+    _estado = await resp.json();
+    renderResults(_estado);
+    activatePipeline();
+    setStatus("badge-ok", `${_estado.n_pacientes} paciente(s) transformado(s)`);
+  } catch (e) {
+    setStatus("badge-err", "Erro: " + e.message);
+    document.getElementById("empty-state").style.display = "flex";
+    document.getElementById("empty-state").innerHTML =
+      `<div class="icon">⚠️</div>
+       <p style="color:#ef4444;font-weight:600">${e.message}</p>
+       <p style="font-size:0.75rem;color:#9ca3af">Verifique se a API está rodando: <code>python app/api.py</code></p>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "▶ Executar Transformação";
+  }
+}
+
+function renderResults(d) {
+  // métricas
+  const mr = document.getElementById("metrics-row");
+  const perfil = d.perfil_ativo ? "mock ativo" : "ausente";
+  mr.innerHTML = metric("Pacientes", d.n_pacientes, "transformados") +
+    metric("Janelas", d.n_janelas, "observadas") +
+    metric("Colunas", d.n_colunas, "variáveis geradas") +
+    metric("Perfil", perfil, "Bloco 1");
+
+  // tabela
+  renderTabela(d.tabela, d.colunas);
+
+  // selector de pacientes
+  const sel = document.getElementById("sel-paciente");
+  sel.innerHTML = (d.pacientes_ids || []).map(id =>
+    `<option value="${id}">${id}</option>`
+  ).join("");
+
+  // json
+  mostrarJson();
+
+  // validação
+  renderValidacao(d.report_metricas, d.report_texto);
+
+  document.getElementById("results").style.display = "block";
+}
+
+function metric(label, value, sub) {
+  return `<div class="metric-card">
+    <div class="label">${label}</div>
+    <div class="value">${value}</div>
+    <div class="sub">${sub}</div>
+  </div>`;
+}
+
+function renderTabela(rows, cols) {
+  if (!rows || !cols) return;
+  const thead = cols.map(c => `<th>${c}</th>`).join("");
+  const tbody = rows.map(row =>
+    "<tr>" + cols.map(c => `<td>${row[c] ?? ""}</td>`).join("") + "</tr>"
+  ).join("");
+  document.getElementById("tabela-wrap").innerHTML =
+    `<table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
+
+  // CSV download
+  const csv = [cols.join(","), ...rows.map(r => cols.map(c => r[c] ?? "").join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  document.getElementById("btn-csv").href = URL.createObjectURL(blob);
+}
+
+async function mostrarJson() {
+  if (!_estado) return;
+  const pid = parseInt(document.getElementById("sel-paciente").value);
+
+  let data;
+  try {
+    const perfilMode = document.querySelector('input[name="perfil"]:checked').value;
+    const resp = await fetch(`${API}/paciente_json`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subject_id: pid,
+        entradas_dir: document.getElementById("inp-entradas").value,
+        patient_info_file: perfilMode === "mock"
+          ? document.getElementById("inp-mock").value : null,
+      }),
+    });
+    data = await resp.json();
+  } catch(e) {
+    // fallback para preview do primeiro paciente
+    data = _estado.preview_json || {};
+  }
+
+  document.getElementById("json-viewer").innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+}
+
+function syntaxHighlight(json) {
+  return json
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      match => {
+        let cls = "jv-num";
+        if (/^"/.test(match)) {
+          cls = /:$/.test(match) ? "jk" : "jv-str";
+        } else if (/true|false/.test(match)) cls = "jv-bool";
+        else if (/null/.test(match)) cls = "jv-null";
+        return `<span class="${cls}">${match}</span>`;
+      }
+    );
+}
+
+function renderValidacao(metricas, reportTexto) {
+  const el = document.getElementById("val-content");
+  if (!metricas || Object.keys(metricas).length === 0) {
+    el.innerHTML = `<div class="alert-info">Arquivo de referência não encontrado.</div>`;
+    return;
+  }
+
+  const iguais = metricas["Colunas iguais"] || 0;
+  const difs   = metricas["Colunas com diferenca de valor"] || 0;
+  const pcts   = metricas["Pacientes comparados"] || 0;
+  const ausentes = metricas["Colunas esperadas ausentes"] || 0;
+
+  let cards = `<div class="val-grid">
+    ${valCard(pcts, "Pacientes comparados", "")}
+    ${valCard(iguais, "Colunas iguais", "green")}
+    ${valCard(difs, "Com divergência", difs > 0 ? "red" : "green")}
+    ${valCard(ausentes, "Colunas ausentes", ausentes > 0 ? "red" : "")}
+  </div>`;
+
+  const diagLabels = [
+    ["Diagnostico", "Diagnóstico geral"],
+    ["Nao comparaveis neste modo", "Não comparáveis (sem perfil)"],
+    ["Diferencas possivelmente ligadas a perfil/peso/sexo", "Ligadas a perfil/sexo/peso"],
+    ["Diferencas possivelmente ligadas a recorte/internacao", "Ligadas a recorte/internação"],
+    ["Diferencas em regras longitudinais a calibrar", "Regras longitudinais a calibrar"],
+  ];
+  let diags = "";
+  diagLabels.forEach(([key, label]) => {
+    if (metricas[key]) {
+      diags += `<div class="diag-block"><strong>${label}:</strong> ${metricas[key]}</div>`;
+    }
+  });
+
+  const rawSection = reportTexto
+    ? `<details style="margin-top:12px">
+        <summary style="cursor:pointer;font-size:0.78rem;color:var(--muted);margin-bottom:8px">
+          Ver relatório completo
+        </summary>
+        <div class="report-raw">${reportTexto}</div>
+      </details>`
+    : "";
+
+  el.innerHTML = cards + diags + rawSection;
+}
+
+function valCard(value, title, cls) {
+  return `<div class="val-card ${cls}">
+    <div class="vl">${value}</div>
+    <div class="vt">${title}</div>
+  </div>`;
+}
+
+function switchTab(name) {
+  document.querySelectorAll(".tab-btn").forEach((b, i) => {
+    const names = ["resultado","json","validacao"];
+    b.classList.toggle("active", names[i] === name);
+  });
+  document.querySelectorAll(".tab-panel").forEach(p => {
+    p.classList.toggle("active", p.id === "tab-" + name);
+  });
+  if (name === "json") mostrarJson();
+}
+</script>
+</body>
+</html>
