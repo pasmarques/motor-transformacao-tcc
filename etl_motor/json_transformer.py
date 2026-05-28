@@ -23,6 +23,7 @@ from etl_motor.modules import (
 )
 from etl_motor.orchestrator import OrquestradorETL
 from etl_motor.personalizacao import AggregationSpec, aplicar_personalizacao
+from etl_motor.plugin_loader import descobrir_plugins
 
 # Caminho padrao do arquivo de regras (raiz do projeto)
 _REGRAS_PATH = Path(__file__).resolve().parents[1] / "regras.json"
@@ -40,11 +41,13 @@ def _load_regras(regras_path: Path | None = None) -> dict:
 class JsonTransformador:
     """Interface oficial do Bloco 2 para transformar um JSON de paciente."""
 
-    def __init__(self, regras_path: Path | None = None) -> None:
+    def __init__(self, regras_path: Path | None = None, plugins_dir: Path | None = None) -> None:
         regras = _load_regras(regras_path)
         self._regras_lab = regras.get("laboratorio", {})
         self._regras_sv = regras.get("sinais_vitais", {})
         self._regras_dv = regras.get("drogas_vasoativas", {})
+        self._regras_plugins = regras.get("plugins", {})
+        self._plugins = descobrir_plugins(plugins_dir=plugins_dir, regras=self._regras_plugins)
 
     def transformar_json(
         self,
@@ -61,21 +64,23 @@ class JsonTransformador:
         bh_df = self._balanco_hidrico_df(paciente_json, subject_id)
         evacuacao_df = self._evacuacao_events_df(paciente_json, subject_id)
 
+        modulos_core = [
+            ModuloPerfil(),
+            ModuloInternacao(),
+            ModuloBalancoHidrico(bh_df),
+            ModuloEvacuacao(evacuacao_df),
+            ModuloNutricao(),
+            ModuloVentilacaoMecanica(),
+            ModuloHemodialise(),
+            ModuloDrogasVasoativas(self._regras_dv),
+            ModuloSinaisVitais(self._regras_sv),
+            ModuloLaboratorio(self._regras_lab),
+        ]
+
         orchestrator = OrquestradorETL(
             patients_df=patients_df,
             windows_df=windows_df,
-            modules=[
-                ModuloPerfil(),
-                ModuloInternacao(),
-                ModuloBalancoHidrico(bh_df),
-                ModuloEvacuacao(evacuacao_df),
-                ModuloNutricao(),
-                ModuloVentilacaoMecanica(),
-                ModuloHemodialise(),
-                ModuloDrogasVasoativas(self._regras_dv),
-                ModuloSinaisVitais(self._regras_sv),
-                ModuloLaboratorio(self._regras_lab),
-            ],
+            modules=modulos_core + self._plugins,
         )
         resultado = orchestrator.transformar_paciente(subject_id=subject_id, config=config)
         return aplicar_personalizacao(

@@ -42,6 +42,17 @@ def variaveis():
     return jsonify(list(VARIAVEIS_SAIDA_PADRAO))
 
 
+@app.route("/api/plugins", methods=["GET"])
+def get_plugins():
+    """Retorna os plugins ativos carregados pelo motor."""
+    from etl_motor.plugin_loader import descobrir_plugins
+    plugins = descobrir_plugins()
+    return jsonify([
+        {"name": p.name, "provides": list(p.provides)}
+        for p in plugins
+    ])
+
+
 @app.route("/api/regras", methods=["GET"])
 def get_regras():
     """Retorna o conteudo atual do regras.json."""

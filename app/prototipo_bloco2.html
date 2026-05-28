@@ -480,6 +480,25 @@
   }
   .agr-builder button:hover { background: var(--accent2); }
 
+  /* plugins ativos */
+  .plugin-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #1e3a2f;
+    border: 1px solid #166534;
+    color: #86efac;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    padding: 3px 7px;
+    margin: 2px 2px 2px 0;
+  }
+  .plugin-empty {
+    font-size: 0.7rem;
+    color: #64748b;
+    font-style: italic;
+  }
+
   /* editor de regras */
   .regras-editor {
     display: none;
@@ -554,6 +573,12 @@
   <div id="sidebar-header">
     <h1>Motor de Transformação<br>MIMIC-IV</h1>
     <span class="badge">Bloco 2 — Protótipo</span>
+  </div>
+
+  <!-- Plugins ativos -->
+  <div class="sidebar-section" id="plugins-section">
+    <label class="group-label">Plugins Ativos</label>
+    <div id="plugins-list" style="font-size:0.72rem;color:#64748b">Carregando...</div>
   </div>
 
   <!-- Entrada -->
@@ -1028,6 +1053,25 @@ function valCard(value, title, cls) {
     <div class="vt">${title}</div>
   </div>`;
 }
+
+// ── Plugins ativos ───────────────────────────────────
+async function carregarPlugins() {
+  const el = document.getElementById("plugins-list");
+  try {
+    const resp = await fetch(`${API}/plugins`);
+    const plugins = await resp.json();
+    if (!plugins.length) {
+      el.innerHTML = `<span class="plugin-empty">Nenhum plugin carregado</span>`;
+      return;
+    }
+    el.innerHTML = plugins.map(p =>
+      `<span class="plugin-tag" title="Gera: ${p.provides.join(', ')}">⬡ ${p.name}</span>`
+    ).join("");
+  } catch(e) {
+    el.innerHTML = `<span class="plugin-empty">API offline</span>`;
+  }
+}
+carregarPlugins();
 
 // ── Regras clínicas ──────────────────────────────────
 async function abrirRegras() {
