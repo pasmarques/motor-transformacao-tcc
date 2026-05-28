@@ -33,11 +33,40 @@ from etl_motor.validation import NAO_COMPARAVEIS_SEM_PERFIL, comparar_com_refere
 app = Flask(__name__)
 CORS(app)
 
+REGRAS_PATH = PROJECT_ROOT / "regras.json"
+
 
 @app.route("/api/variaveis", methods=["GET"])
 def variaveis():
     """Retorna a lista de variaveis de saida do contrato."""
     return jsonify(list(VARIAVEIS_SAIDA_PADRAO))
+
+
+@app.route("/api/regras", methods=["GET"])
+def get_regras():
+    """Retorna o conteudo atual do regras.json."""
+    if not REGRAS_PATH.exists():
+        return jsonify({}), 200
+    try:
+        return jsonify(json.loads(REGRAS_PATH.read_text(encoding="utf-8")))
+    except Exception as exc:
+        return jsonify({"erro": f"Erro ao ler regras.json: {exc}"}), 500
+
+
+@app.route("/api/regras", methods=["PUT"])
+def put_regras():
+    """Substitui o conteudo do regras.json pelo corpo da requisicao."""
+    body = request.get_json(force=True)
+    if not isinstance(body, dict):
+        return jsonify({"erro": "Payload deve ser um objeto JSON."}), 400
+    try:
+        REGRAS_PATH.write_text(
+            json.dumps(body, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        return jsonify({"ok": True, "mensagem": "regras.json atualizado com sucesso."})
+    except Exception as exc:
+        return jsonify({"erro": f"Erro ao salvar regras.json: {exc}"}), 500
 
 
 @app.route("/api/transform", methods=["POST"])

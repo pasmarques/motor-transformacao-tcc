@@ -19,16 +19,24 @@ class ModuloDrogasVasoativas(BaseModule):
         "nPropDiasUsoVaso",
     )
 
+    def __init__(self, regras: dict | None = None) -> None:
+        self._r = regras or {}
+
+    def _r_get(self, key: str, default: float) -> float:
+        return float(self._r.get(key, default))
+
     def transform(self, context: PatientContext) -> dict[str, Any]:
         denominator = max(len(context.windows), 1)
         nora = self._numeric_col(context.windows, "nora_dose_maxima")
         vaso = self._bool_col(context.windows, "vasopressina_em_uso")
         nora_use = nora.gt(0)
+        f1 = self._r_get("nora_faixa1_upper", 0.25)
+        f2 = self._r_get("nora_faixa2_upper", 0.50)
         return {
             "nPropDiasSemUsoNora": float((~nora_use).sum() / denominator),
-            "nPropDiasNoraMax025": float(((nora > 0) & (nora <= 0.25)).sum() / denominator),
-            "nPropDiasNoraMax050": float(((nora > 0.25) & (nora <= 0.50)).sum() / denominator),
-            "nPropDiasNoraMax050Mais": float((nora > 0.50).sum() / denominator),
+            "nPropDiasNoraMax025": float(((nora > 0) & (nora <= f1)).sum() / denominator),
+            "nPropDiasNoraMax050": float(((nora > f1) & (nora <= f2)).sum() / denominator),
+            "nPropDiasNoraMax050Mais": float((nora > f2).sum() / denominator),
             "nPropDiasUsoVaso": float(vaso.sum() / denominator),
         }
 

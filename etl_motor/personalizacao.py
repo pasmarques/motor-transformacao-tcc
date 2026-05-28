@@ -187,6 +187,8 @@ def calcular_agregacao(
         return float(valores.mean())
     if funcao == "sum":
         return float(valores.sum())
+    if funcao == "count":
+        return float(len(valores))
     raise ValueError(f"Funcao de agregacao invalida: {spec.funcao}")
 
 
@@ -280,6 +282,8 @@ def _normalizar_funcao(value: str) -> str:
         "avg": "mean",
         "soma": "sum",
         "sum": "sum",
+        "count": "count",
+        "contagem": "count",
     }
     if normalized not in aliases:
         raise ValueError(f"Funcao de agregacao invalida: {value}")

@@ -12,6 +12,9 @@ class ModuloLaboratorio(BaseModule):
 
     name = "laboratorio"
     requires = ("cSexo",)
+
+    def __init__(self, regras: dict | None = None) -> None:
+        self._r = regras or {}
     provides = (
         "nPropDiasUreiaHiper",
         "nPropDiasCreatininaHiper",
@@ -38,38 +41,63 @@ class ModuloLaboratorio(BaseModule):
         "nPropDiasPlaquetasHipo",
     )
 
+    def _r_get(self, key: str, default: float) -> float:
+        return float(self._r.get(key, default))
+
     def transform(self, context: PatientContext) -> dict[str, Any]:
         denominator = max(len(context.windows), 1)
         sexo = context.features.get("cSexo")
         masculino = sexo == 0
+        suf = "masculino" if masculino else "feminino"
 
-        ast_limit = 38.0 if masculino else 32.0
-        alt_limit = 41.0 if masculino else 31.0
+        ast_limit = self._r_get(f"ast_upper_{suf}", 38.0 if masculino else 32.0)
+        alt_limit = self._r_get(f"alt_upper_{suf}", 41.0 if masculino else 31.0)
 
         return {
-            "nPropDiasUreiaHiper": self._prop_any(context.windows, "ureia", denominator, upper=50.0 if masculino else 40.0),
-            "nPropDiasCreatininaHiper": self._prop_any(context.windows, "creatinina", denominator, upper=1.3 if masculino else 1.1),
-            "nPropDiasLinfoTotaisHipo": self._prop_any(context.windows, "linfocitos_totais", denominator, lower=900.0 if masculino else 800.0),
-            "nPropDiasHemoglobinaHipo": self._prop_any(context.windows, "hemoglobina", denominator, lower=13.5 if masculino else 12.0),
-            "nPropDiasBilirrubinaHiper": self._prop_any(context.windows, "bilirrubina", denominator, upper=1.2),
-            "nPropDiasAlbuminaHipo": self._prop_any(context.windows, "albumina", denominator, lower=3.5),
-            "nPropDiasTrigliceridesHiper": self._prop_any(context.windows, "triglicerides", denominator, upper=150.0 if masculino else 135.0),
-            "nPropDiasPotassioHiper": self._prop_any(context.windows, "potassio", denominator, upper=5.5),
-            "nPropDiasPotassioHipo": self._prop_any(context.windows, "potassio", denominator, lower=3.0),
-            "nPropDiasMagnesioHiper": self._prop_any(context.windows, "magnesio", denominator, upper=2.5),
-            "nPropDiasMagnesioHipo": self._prop_any(context.windows, "magnesio", denominator, lower=1.6),
-            "nPropDiasSodioHiper": self._prop_any(context.windows, "sodio", denominator, upper=145.0, inclusive_upper=True),
-            "nPropDiasSodioHipo": self._prop_any(context.windows, "sodio", denominator, lower=135.0),
-            "nPropDiasFosforoHipo": self._prop_any(context.windows, "fosforo", denominator, lower=2.0),
+            "nPropDiasUreiaHiper": self._prop_any(context.windows, "ureia", denominator,
+                upper=self._r_get(f"ureia_upper_{suf}", 50.0 if masculino else 40.0)),
+            "nPropDiasCreatininaHiper": self._prop_any(context.windows, "creatinina", denominator,
+                upper=self._r_get(f"creatinina_upper_{suf}", 1.3 if masculino else 1.1)),
+            "nPropDiasLinfoTotaisHipo": self._prop_any(context.windows, "linfocitos_totais", denominator,
+                lower=self._r_get(f"linfocitos_lower_{suf}", 900.0 if masculino else 800.0)),
+            "nPropDiasHemoglobinaHipo": self._prop_any(context.windows, "hemoglobina", denominator,
+                lower=self._r_get(f"hemoglobina_lower_{suf}", 13.5 if masculino else 12.0)),
+            "nPropDiasBilirrubinaHiper": self._prop_any(context.windows, "bilirrubina", denominator,
+                upper=self._r_get("bilirrubina_upper", 1.2)),
+            "nPropDiasAlbuminaHipo": self._prop_any(context.windows, "albumina", denominator,
+                lower=self._r_get("albumina_lower", 3.5)),
+            "nPropDiasTrigliceridesHiper": self._prop_any(context.windows, "triglicerides", denominator,
+                upper=self._r_get(f"triglicerides_upper_{suf}", 150.0 if masculino else 135.0)),
+            "nPropDiasPotassioHiper": self._prop_any(context.windows, "potassio", denominator,
+                upper=self._r_get("potassio_upper", 5.5)),
+            "nPropDiasPotassioHipo": self._prop_any(context.windows, "potassio", denominator,
+                lower=self._r_get("potassio_lower", 3.0)),
+            "nPropDiasMagnesioHiper": self._prop_any(context.windows, "magnesio", denominator,
+                upper=self._r_get("magnesio_upper", 2.5)),
+            "nPropDiasMagnesioHipo": self._prop_any(context.windows, "magnesio", denominator,
+                lower=self._r_get("magnesio_lower", 1.6)),
+            "nPropDiasSodioHiper": self._prop_any(context.windows, "sodio", denominator,
+                upper=self._r_get("sodio_upper", 145.0), inclusive_upper=True),
+            "nPropDiasSodioHipo": self._prop_any(context.windows, "sodio", denominator,
+                lower=self._r_get("sodio_lower", 135.0)),
+            "nPropDiasFosforoHipo": self._prop_any(context.windows, "fosforo", denominator,
+                lower=self._r_get("fosforo_lower", 2.0)),
             "cFreqASTHiper": self._freq_hiper(context.windows, "ast", ast_limit),
             "cFreqALTHiper": self._freq_hiper(context.windows, "alt", alt_limit),
-            "cFreqFosfatAlcalinaHiper": self._freq_hiper(context.windows, "fosfatase_alcalina", 120.0),
-            "nPropDiasPHHiper": self._prop_any(context.windows, "ph", denominator, upper=7.45),
-            "nPropDiasPHHipo": self._prop_any(context.windows, "ph", denominator, lower=7.35),
-            "nPropDiasWBCHipo": self._prop_any(context.windows, "wbc", denominator, lower=4.0),
-            "nPropDiasWBCHiper": self._prop_any(context.windows, "wbc", denominator, upper=11.0),
-            "nPropDiasLactatoHiper": self._prop_any(context.windows, "lactato", denominator, upper=2.5),
-            "nPropDiasPlaquetasHipo": self._prop_any(context.windows, "plaquetas", denominator, lower=150.0),
+            "cFreqFosfatAlcalinaHiper": self._freq_hiper(context.windows, "fosfatase_alcalina",
+                self._r_get("fosfatase_alcalina_upper", 120.0)),
+            "nPropDiasPHHiper": self._prop_any(context.windows, "ph", denominator,
+                upper=self._r_get("ph_upper", 7.45)),
+            "nPropDiasPHHipo": self._prop_any(context.windows, "ph", denominator,
+                lower=self._r_get("ph_lower", 7.35)),
+            "nPropDiasWBCHipo": self._prop_any(context.windows, "wbc", denominator,
+                lower=self._r_get("wbc_lower", 4.0)),
+            "nPropDiasWBCHiper": self._prop_any(context.windows, "wbc", denominator,
+                upper=self._r_get("wbc_upper", 11.0)),
+            "nPropDiasLactatoHiper": self._prop_any(context.windows, "lactato", denominator,
+                upper=self._r_get("lactato_upper", 2.5)),
+            "nPropDiasPlaquetasHipo": self._prop_any(context.windows, "plaquetas", denominator,
+                lower=self._r_get("plaquetas_lower", 150.0)),
         }
 
     @classmethod

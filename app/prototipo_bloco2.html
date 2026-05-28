@@ -479,6 +479,72 @@
     margin-top: 2px;
   }
   .agr-builder button:hover { background: var(--accent2); }
+
+  /* editor de regras */
+  .regras-editor {
+    display: none;
+    margin-top: 8px;
+  }
+  .regras-editor textarea {
+    width: 100%;
+    background: #1a2535;
+    border: 1px solid #3d5068;
+    color: #e2e8f0;
+    border-radius: 5px;
+    padding: 8px;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+  }
+  .regras-editor textarea:focus { border-color: var(--accent); }
+  .regras-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .regras-actions button {
+    flex: 1;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-regras-salvar {
+    background: var(--green);
+    color: #fff;
+  }
+  .btn-regras-salvar:hover { background: #059669; }
+  .btn-regras-cancelar {
+    background: #2d3f54;
+    color: #94a3b8;
+    border: 1px solid #3d5068 !important;
+  }
+  .btn-regras-cancelar:hover { color: #e2e8f0; }
+  .btn-regras-abrir {
+    width: 100%;
+    background: #2d3f54;
+    border: 1px solid #3d5068;
+    color: #94a3b8;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    padding: 5px 0;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .btn-regras-abrir:hover { color: #e2e8f0; }
+  .regras-msg {
+    font-size: 0.68rem;
+    margin-top: 4px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    display: none;
+  }
+  .regras-msg.ok  { background: #052e16; color: #86efac; display: block; }
+  .regras-msg.err { background: #450a0a; color: #fca5a5; display: block; }
 </style>
 </head>
 <body>
@@ -590,6 +656,23 @@
       <label>Lista de agregações (origem:func:nome)</label>
       <textarea id="inp-agregacoes" rows="3"
         placeholder="creatinina:max:creatinina_max&#10;albumina:min:albumina_min"></textarea>
+    </div>
+  </div>
+
+  <!-- Regras Clínicas -->
+  <div class="sidebar-section">
+    <label class="group-label">Regras Clínicas</label>
+    <p style="font-size:0.68rem;color:#64748b;line-height:1.4;margin-bottom:6px">
+      Limiares clínicos usados pelo motor. Edite e salve sem reiniciar a API.
+    </p>
+    <button class="btn-regras-abrir" onclick="abrirRegras()">✎ Editar regras.json</button>
+    <div class="regras-editor" id="regras-editor">
+      <textarea id="regras-textarea" rows="12" spellcheck="false"></textarea>
+      <div class="regras-actions">
+        <button class="btn-regras-cancelar" onclick="fecharRegras()">Cancelar</button>
+        <button class="btn-regras-salvar" onclick="salvarRegras()">✓ Salvar</button>
+      </div>
+      <div class="regras-msg" id="regras-msg"></div>
     </div>
   </div>
 
@@ -944,6 +1027,58 @@ function valCard(value, title, cls) {
     <div class="vl">${value}</div>
     <div class="vt">${title}</div>
   </div>`;
+}
+
+// ── Regras clínicas ──────────────────────────────────
+async function abrirRegras() {
+  const editor = document.getElementById("regras-editor");
+  const ta = document.getElementById("regras-textarea");
+  const msg = document.getElementById("regras-msg");
+  msg.className = "regras-msg";
+  ta.value = "Carregando...";
+  editor.style.display = "block";
+  try {
+    const resp = await fetch(`${API}/regras`);
+    const data = await resp.json();
+    ta.value = JSON.stringify(data, null, 2);
+  } catch(e) {
+    ta.value = "";
+    msg.textContent = "Erro ao carregar regras.json: " + e.message;
+    msg.className = "regras-msg err";
+  }
+}
+
+function fecharRegras() {
+  document.getElementById("regras-editor").style.display = "none";
+  document.getElementById("regras-msg").className = "regras-msg";
+}
+
+async function salvarRegras() {
+  const ta = document.getElementById("regras-textarea");
+  const msg = document.getElementById("regras-msg");
+  msg.className = "regras-msg";
+  let payload;
+  try {
+    payload = JSON.parse(ta.value);
+  } catch(e) {
+    msg.textContent = "JSON inválido: " + e.message;
+    msg.className = "regras-msg err";
+    return;
+  }
+  try {
+    const resp = await fetch(`${API}/regras`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const result = await resp.json();
+    if (!resp.ok) throw new Error(result.erro || "Erro ao salvar");
+    msg.textContent = "✓ " + result.mensagem;
+    msg.className = "regras-msg ok";
+  } catch(e) {
+    msg.textContent = "Erro ao salvar: " + e.message;
+    msg.className = "regras-msg err";
+  }
 }
 
 function switchTab(name) {

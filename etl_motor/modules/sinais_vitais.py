@@ -23,18 +23,33 @@ class ModuloSinaisVitais(BaseModule):
         "nPropDiasPAMHiper",
     )
 
+    def __init__(self, regras: dict | None = None) -> None:
+        self._r = regras or {}
+
+    def _r_get(self, key: str, default: float) -> float:
+        return float(self._r.get(key, default))
+
     def transform(self, context: PatientContext) -> dict[str, Any]:
         denominator = max(len(context.windows), 1)
         return {
-            "nPropDiasTempCorpElevada": self._prop_any(context.windows, "temperatura", denominator, lower=None, upper=37.8),
-            "nPropDiasHGTHiper": self._prop_any(context.windows, "hgt", denominator, lower=None, upper=180.0),
-            "nPropDiasHGTHipo": self._prop_any(context.windows, "hgt", denominator, lower=70.0, upper=None),
-            "nPropDiasPASHipo": self._prop_any(context.windows, "pas", denominator, lower=100.0, upper=None),
-            "nPropDiasPASHiper": self._prop_any(context.windows, "pas", denominator, lower=None, upper=140.0),
-            "nPropDiasPADHipo": self._prop_any(context.windows, "pad", denominator, lower=60.0, upper=None),
-            "nPropDiasPADHiper": self._prop_any(context.windows, "pad", denominator, lower=None, upper=90.0),
-            "nPropDiasPAMHipo": self._prop_any(context.windows, "pam", denominator, lower=64.0, upper=None),
-            "nPropDiasPAMHiper": self._prop_any(context.windows, "pam", denominator, lower=None, upper=64.0),
+            "nPropDiasTempCorpElevada": self._prop_any(context.windows, "temperatura", denominator,
+                lower=None, upper=self._r_get("temperatura_upper", 37.8)),
+            "nPropDiasHGTHiper": self._prop_any(context.windows, "hgt", denominator,
+                lower=None, upper=self._r_get("hgt_upper", 180.0)),
+            "nPropDiasHGTHipo": self._prop_any(context.windows, "hgt", denominator,
+                lower=self._r_get("hgt_lower", 70.0), upper=None),
+            "nPropDiasPASHipo": self._prop_any(context.windows, "pas", denominator,
+                lower=self._r_get("pas_lower", 100.0), upper=None),
+            "nPropDiasPASHiper": self._prop_any(context.windows, "pas", denominator,
+                lower=None, upper=self._r_get("pas_upper", 140.0)),
+            "nPropDiasPADHipo": self._prop_any(context.windows, "pad", denominator,
+                lower=self._r_get("pad_lower", 60.0), upper=None),
+            "nPropDiasPADHiper": self._prop_any(context.windows, "pad", denominator,
+                lower=None, upper=self._r_get("pad_upper", 90.0)),
+            "nPropDiasPAMHipo": self._prop_any(context.windows, "pam", denominator,
+                lower=self._r_get("pam_lower", 64.0), upper=None),
+            "nPropDiasPAMHiper": self._prop_any(context.windows, "pam", denominator,
+                lower=None, upper=self._r_get("pam_upper", 64.0)),
         }
 
     @classmethod

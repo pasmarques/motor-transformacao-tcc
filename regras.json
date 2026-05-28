@@ -1,0 +1,50 @@
+{
+  "_descricao": "Regras clinicas do motor de transformacao MIMIC-IV. Altere os valores sem modificar o codigo.",
+  "laboratorio": {
+    "ph_upper": 7.45,
+    "ph_lower": 7.35,
+    "ureia_upper_masculino": 50.0,
+    "ureia_upper_feminino": 40.0,
+    "creatinina_upper_masculino": 1.3,
+    "creatinina_upper_feminino": 1.1,
+    "linfocitos_lower_masculino": 900.0,
+    "linfocitos_lower_feminino": 800.0,
+    "hemoglobina_lower_masculino": 13.5,
+    "hemoglobina_lower_feminino": 12.0,
+    "bilirrubina_upper": 1.2,
+    "albumina_lower": 3.5,
+    "triglicerides_upper_masculino": 150.0,
+    "triglicerides_upper_feminino": 135.0,
+    "potassio_upper": 5.5,
+    "potassio_lower": 3.0,
+    "magnesio_upper": 2.5,
+    "magnesio_lower": 1.6,
+    "sodio_upper": 145.0,
+    "sodio_lower": 135.0,
+    "fosforo_lower": 2.0,
+    "ast_upper_masculino": 38.0,
+    "ast_upper_feminino": 32.0,
+    "alt_upper_masculino": 41.0,
+    "alt_upper_feminino": 31.0,
+    "fosfatase_alcalina_upper": 120.0,
+    "wbc_lower": 4.0,
+    "wbc_upper": 11.0,
+    "lactato_upper": 2.5,
+    "plaquetas_lower": 150.0
+  },
+  "sinais_vitais": {
+    "temperatura_upper": 37.8,
+    "hgt_upper": 180.0,
+    "hgt_lower": 70.0,
+    "pas_lower": 100.0,
+    "pas_upper": 140.0,
+    "pad_lower": 60.0,
+    "pad_upper": 90.0,
+    "pam_lower": 64.0,
+    "pam_upper": 64.0
+  },
+  "drogas_vasoativas": {
+    "nora_faixa1_upper": 0.25,
+    "nora_faixa2_upper": 0.50
+  }
+}

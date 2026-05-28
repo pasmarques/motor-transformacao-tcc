@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -22,9 +24,27 @@ from etl_motor.modules import (
 from etl_motor.orchestrator import OrquestradorETL
 from etl_motor.personalizacao import AggregationSpec, aplicar_personalizacao
 
+# Caminho padrao do arquivo de regras (raiz do projeto)
+_REGRAS_PATH = Path(__file__).resolve().parents[1] / "regras.json"
+
+
+def _load_regras(regras_path: Path | None = None) -> dict:
+    """Carrega o arquivo regras.json. Retorna dict vazio se nao encontrado."""
+    path = regras_path or _REGRAS_PATH
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
 
 class JsonTransformador:
     """Interface oficial do Bloco 2 para transformar um JSON de paciente."""
+
+    def __init__(self, regras_path: Path | None = None) -> None:
+        regras = _load_regras(regras_path)
+        self._regras_lab = regras.get("laboratorio", {})
+        self._regras_sv = regras.get("sinais_vitais", {})
+        self._regras_dv = regras.get("drogas_vasoativas", {})
 
     def transformar_json(
         self,
@@ -52,9 +72,9 @@ class JsonTransformador:
                 ModuloNutricao(),
                 ModuloVentilacaoMecanica(),
                 ModuloHemodialise(),
-                ModuloDrogasVasoativas(),
-                ModuloSinaisVitais(),
-                ModuloLaboratorio(),
+                ModuloDrogasVasoativas(self._regras_dv),
+                ModuloSinaisVitais(self._regras_sv),
+                ModuloLaboratorio(self._regras_lab),
             ],
         )
         resultado = orchestrator.transformar_paciente(subject_id=subject_id, config=config)
