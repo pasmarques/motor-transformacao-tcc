@@ -404,6 +404,81 @@
     display: inline-block;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* seleção de variáveis */
+  .var-list {
+    max-height: 160px;
+    overflow-y: auto;
+    background: #253447;
+    border: 1px solid #3d5068;
+    border-radius: 5px;
+    padding: 6px 8px;
+    margin-top: 6px;
+  }
+  .var-list label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: #cbd5e1;
+    padding: 2px 0;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .var-list input[type=checkbox] { accent-color: var(--accent); flex-shrink: 0; }
+  .var-list-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .var-list-actions button {
+    flex: 1;
+    background: #2d3f54;
+    border: 1px solid #3d5068;
+    color: #94a3b8;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    padding: 3px 0;
+    cursor: pointer;
+  }
+  .var-list-actions button:hover { color: #e2e8f0; }
+
+  /* builder de agregações */
+  .agr-builder {
+    background: #253447;
+    border: 1px solid #3d5068;
+    border-radius: 5px;
+    padding: 8px;
+    margin-bottom: 6px;
+  }
+  .agr-builder .agr-row {
+    display: grid;
+    grid-template-columns: 1fr 80px;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .agr-builder input, .agr-builder select {
+    background: #1e2a3a;
+    border: 1px solid #3d5068;
+    color: #e2e8f0;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 0.72rem;
+    width: 100%;
+  }
+  .agr-builder button {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 2px;
+  }
+  .agr-builder button:hover { background: var(--accent2); }
 </style>
 </head>
 <body>
@@ -470,15 +545,49 @@
     <div class="radio-group field">
       <label>
         <input type="radio" name="variaveis" value="todas" checked />
-        Todas do PDF
+        Todas do contrato
       </label>
       <label>
         <input type="radio" name="variaveis" value="sem-meta" />
         Sem metadados auxiliares
       </label>
+      <label>
+        <input type="radio" name="variaveis" value="selecionar" />
+        Selecionar variáveis
+      </label>
+    </div>
+
+    <!-- Lista de variáveis para seleção -->
+    <div id="field-var-select" style="display:none">
+      <div class="var-list-actions">
+        <button onclick="toggleAllVars(true)">Marcar todas</button>
+        <button onclick="toggleAllVars(false)">Desmarcar</button>
+      </div>
+      <div class="var-list" id="var-checklist">
+        <span style="font-size:0.7rem;color:#64748b">Carregando variáveis...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agregações -->
+  <div class="sidebar-section">
+    <label class="group-label">Agregações Customizadas</label>
+    <div class="agr-builder">
+      <div class="agr-row">
+        <input type="text" id="agr-origem" placeholder="Variável origem (ex: ph)" />
+        <select id="agr-func">
+          <option value="max">max</option>
+          <option value="min">min</option>
+          <option value="mean">mean</option>
+          <option value="sum">sum</option>
+          <option value="count">count</option>
+        </select>
+      </div>
+      <input type="text" id="agr-nome" placeholder="Nome da variável de saída (ex: ph_max)" style="margin-bottom:4px" />
+      <button onclick="adicionarAgregacao()">+ Adicionar agregação</button>
     </div>
     <div class="field">
-      <label>Agregações extras (origem:func:nome)</label>
+      <label>Lista de agregações (origem:func:nome)</label>
       <textarea id="inp-agregacoes" rows="3"
         placeholder="creatinina:max:creatinina_max&#10;albumina:min:albumina_min"></textarea>
     </div>
@@ -573,6 +682,53 @@ document.querySelectorAll('input[name="perfil"]').forEach(r =>
   })
 );
 
+// toggle seleção de variáveis
+document.querySelectorAll('input[name="variaveis"]').forEach(r =>
+  r.addEventListener("change", () => {
+    const show = document.querySelector('input[name="variaveis"]:checked').value === "selecionar";
+    document.getElementById("field-var-select").style.display = show ? "block" : "none";
+    if (show) carregarVariaveis();
+  })
+);
+
+// carrega variáveis do motor via API
+async function carregarVariaveis() {
+  const el = document.getElementById("var-checklist");
+  if (el.querySelector("input")) return; // já carregado
+  try {
+    const resp = await fetch(`${API}/variaveis`);
+    const vars = await resp.json();
+    el.innerHTML = vars.map(v =>
+      `<label><input type="checkbox" class="var-cb" value="${v}" checked />${v}</label>`
+    ).join("");
+  } catch(e) {
+    el.innerHTML = `<span style="font-size:0.7rem;color:#ef4444">Erro ao carregar (API offline?)</span>`;
+  }
+}
+
+function toggleAllVars(check) {
+  document.querySelectorAll(".var-cb").forEach(cb => cb.checked = check);
+}
+
+function getVariaveisSelecionadas() {
+  const mode = document.querySelector('input[name="variaveis"]:checked').value;
+  if (mode !== "selecionar") return null;
+  const selecionadas = [...document.querySelectorAll(".var-cb:checked")].map(cb => cb.value);
+  return selecionadas.length ? selecionadas.join(",") : null;
+}
+
+function adicionarAgregacao() {
+  const origem = document.getElementById("agr-origem").value.trim();
+  const func   = document.getElementById("agr-func").value;
+  const nome   = document.getElementById("agr-nome").value.trim();
+  if (!origem || !nome) { alert("Preencha a variável origem e o nome de saída."); return; }
+  const linha = `${origem}:${func}:${nome}`;
+  const ta = document.getElementById("inp-agregacoes");
+  ta.value = ta.value ? ta.value.trimEnd() + "\n" + linha : linha;
+  document.getElementById("agr-origem").value = "";
+  document.getElementById("agr-nome").value = "";
+}
+
 function setStatus(cls, txt) {
   const b = document.getElementById("status-badge");
   b.className = cls;
@@ -614,6 +770,7 @@ async function executar() {
     max_janelas:          document.getElementById("inp-maxjan").value || null,
     data_referencia:      document.getElementById("inp-dataref").value || null,
     sem_metadados:        varMode === "sem-meta",
+    variaveis_saida:      getVariaveisSelecionadas(),
     agregacoes:           document.getElementById("inp-agregacoes").value,
   };
 
