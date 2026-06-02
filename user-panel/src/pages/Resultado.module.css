@@ -1,0 +1,48 @@
+.metrics {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 12px; margin-bottom: 16px;
+}
+.metricCard {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+}
+.metricLabel { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.metricValue { font-size: 1.5rem; font-weight: 700; }
+.metricSub   { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
+.tableWrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: auto; max-height: 380px;
+  margin-bottom: 12px;
+}
+table { width: 100%; border-collapse: collapse; font-size: 0.73rem; }
+thead th {
+  background: #f8fafc; padding: 8px 12px;
+  text-align: left; font-weight: 600; color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap; position: sticky; top: 0;
+}
+tbody tr:nth-child(even) { background: #fafafa; }
+tbody td {
+  padding: 6px 12px; border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap; color: var(--text);
+}
+
+.paginacao {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 0.78rem; color: var(--muted); margin-bottom: 12px;
+}
+.paginacao button {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 5px; padding: 5px 12px; font-size: 0.76rem;
+}
+.paginacao button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.downloads { display: flex; gap: 10px; }
+.dlBtn {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 5px; padding: 7px 16px;
+  font-size: 0.78rem; font-weight: 600; color: var(--text);
+  transition: background 0.15s;
+}
+.dlBtn:hover { background: var(--bg); }

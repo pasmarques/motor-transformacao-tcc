@@ -1,0 +1,14 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+node_modules
+admin-panel/node_modules
+user-panel/node_modules
+admin-panel/dist
+user-panel/dist
+*.csv
+nginx/ssl
+.env

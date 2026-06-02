@@ -1,0 +1,56 @@
+version: '3.9'
+
+services:
+
+  motor-api:
+    build: .
+    container_name: motor-api
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./etl_motor/plugins:/app/etl_motor/plugins
+      - ./regras.json:/app/regras.json
+      - ./entradas:/app/entradas
+      - ./.admin_hash:/app/.admin_hash:ro
+      - ./ICUpatients21D.csv:/app/ICUpatients21D.csv:ro
+      - ./BASEPACIENTES21D_amostra_atualizado.csv:/app/BASEPACIENTES21D_amostra_atualizado.csv:ro
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/variaveis"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  user-panel:
+    build: ./user-panel
+    container_name: user-panel
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      - motor-api
+
+  admin-panel:
+    build: ./admin-panel
+    container_name: admin-panel
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      - motor-api
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - motor-api
+      - user-panel
+      - admin-panel

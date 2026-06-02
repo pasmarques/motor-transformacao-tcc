@@ -1,20 +1,25 @@
-"""API Flask minima — camada de aplicacao do prototipo Bloco 2.
+"""API Flask — Motor ETL MIMIC-IV (Bloco 2).
 
-Representa a camada API REST da arquitetura completa (FastAPI em producao).
-Expoe o motor de transformacao via HTTP para o frontend HTML.
+Endpoints publicos de transformacao. Nao requerem autenticacao.
+Endpoints admin estao em admin_routes.py (requerem JWT).
 
-Iniciar: python app/api.py
-Porta  : http://localhost:5050
+Iniciar (dev):    python app/api.py
+Iniciar (prod):   gunicorn --workers 4 --bind 0.0.0.0:8000 "app.api:create_app()"
 """
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
 import pandas as pd
+from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
+
+load_dotenv()
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -30,154 +35,158 @@ from etl_motor.personalizacao import (
 )
 from etl_motor.validation import NAO_COMPARAVEIS_SEM_PERFIL, comparar_com_referencia
 
-app = Flask(__name__)
-CORS(app)
-
 REGRAS_PATH = PROJECT_ROOT / "regras.json"
 
-
-@app.route("/api/variaveis", methods=["GET"])
-def variaveis():
-    """Retorna a lista de variaveis de saida do contrato."""
-    return jsonify(list(VARIAVEIS_SAIDA_PADRAO))
+# Instancia global do transformador (recarregada pelo /admin/reload)
+_transformador: JsonTransformador | None = None
 
 
-@app.route("/api/plugins", methods=["GET"])
-def get_plugins():
-    """Retorna os plugins ativos carregados pelo motor."""
-    from etl_motor.plugin_loader import descobrir_plugins
-    plugins = descobrir_plugins()
-    return jsonify([
-        {"name": p.name, "provides": list(p.provides)}
-        for p in plugins
-    ])
+def get_transformador() -> JsonTransformador:
+    global _transformador
+    if _transformador is None:
+        _transformador = JsonTransformador()
+    return _transformador
 
 
-@app.route("/api/regras", methods=["GET"])
-def get_regras():
-    """Retorna o conteudo atual do regras.json."""
-    if not REGRAS_PATH.exists():
-        return jsonify({}), 200
-    try:
-        return jsonify(json.loads(REGRAS_PATH.read_text(encoding="utf-8")))
-    except Exception as exc:
-        return jsonify({"erro": f"Erro ao ler regras.json: {exc}"}), 500
+def reload_transformador() -> None:
+    global _transformador
+    _transformador = JsonTransformador()
 
 
-@app.route("/api/regras", methods=["PUT"])
-def put_regras():
-    """Substitui o conteudo do regras.json pelo corpo da requisicao."""
-    body = request.get_json(force=True)
-    if not isinstance(body, dict):
-        return jsonify({"erro": "Payload deve ser um objeto JSON."}), 400
-    try:
-        REGRAS_PATH.write_text(
-            json.dumps(body, indent=2, ensure_ascii=False),
-            encoding="utf-8",
+def create_app() -> Flask:
+    app = Flask(__name__)
+
+    # JWT
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-secret-troque-em-producao")
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 900   # 15 minutos
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = 604800  # 7 dias
+
+    # CORS
+    cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
+    CORS(app, origins=cors_origins, supports_credentials=True)
+
+    JWTManager(app)
+
+    # Registra blueprints
+    from app.auth import auth_bp
+    from app.admin_routes import admin_bp
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
+
+    # ── Endpoints públicos ─────────────────────────────────
+
+    @app.route("/api/variaveis", methods=["GET"])
+    def variaveis():
+        return jsonify(list(VARIAVEIS_SAIDA_PADRAO))
+
+    @app.route("/api/regras", methods=["GET"])
+    def get_regras():
+        if not REGRAS_PATH.exists():
+            return jsonify({}), 200
+        try:
+            return jsonify(json.loads(REGRAS_PATH.read_text(encoding="utf-8")))
+        except Exception as exc:
+            return jsonify({"erro": str(exc)}), 500
+
+    @app.route("/api/plugins", methods=["GET"])
+    def get_plugins():
+        t = get_transformador()
+        return jsonify([
+            {"name": p.name, "provides": list(p.provides)}
+            for p in t._plugins
+        ])
+
+    @app.route("/api/transform", methods=["POST"])
+    def transform():
+        body = request.get_json(force=True)
+
+        entradas_dir   = body.get("entradas_dir", str(PROJECT_ROOT / "entradas"))
+        patient_info   = body.get("patient_info_file") or None
+        subject_id_raw = body.get("subject_id", "")
+        cortar         = int(body.get("cortar_janelas_finais", 0))
+        max_jan        = body.get("max_janelas") or None
+        data_ref       = body.get("data_referencia") or None
+        sem_meta       = bool(body.get("sem_metadados", True))
+        variaveis_saida = body.get("variaveis_saida") or None
+        agregacoes_raw  = body.get("agregacoes", "")
+
+        subject_ids = [int(subject_id_raw)] if str(subject_id_raw).strip() else None
+        agregacoes = [
+            parse_agregacao_spec(line)
+            for line in agregacoes_raw.splitlines()
+            if line.strip()
+        ]
+        config = TransformConfig(
+            tamanho_janela_horas=24,
+            cortar_janelas_finais=cortar,
+            max_janelas=int(max_jan) if max_jan else None,
+            data_referencia=data_ref,
         )
-        return jsonify({"ok": True, "mensagem": "regras.json atualizado com sucesso."})
-    except Exception as exc:
-        return jsonify({"erro": f"Erro ao salvar regras.json: {exc}"}), 500
 
+        try:
+            pacientes_json = converter_entradas_para_jsons(
+                base_dir=PROJECT_ROOT,
+                entradas_dir=entradas_dir,
+                patient_info_file=patient_info,
+                subject_ids=subject_ids,
+            )
+        except Exception as exc:
+            return jsonify({"erro": f"Erro ao carregar entradas: {exc}"}), 400
 
-@app.route("/api/transform", methods=["POST"])
-def transform():
-    """Executa o pipeline completo e retorna resultado + relatorio."""
-    body = request.get_json(force=True)
+        if not pacientes_json:
+            return jsonify({"erro": "Nenhum paciente encontrado."}), 404
 
-    entradas_dir   = body.get("entradas_dir", str(PROJECT_ROOT / "entradas"))
-    patient_info   = body.get("patient_info_file") or None
-    subject_id_raw = body.get("subject_id", "")
-    cortar         = int(body.get("cortar_janelas_finais", 0))
-    max_jan        = body.get("max_janelas") or None
-    data_ref       = body.get("data_referencia") or None
-    sem_meta       = bool(body.get("sem_metadados", True))
-    variaveis_saida = body.get("variaveis_saida") or None
-    agregacoes_raw  = body.get("agregacoes", "")
+        transformador = get_transformador()
+        df = transformador.transformar_varios_json(
+            pacientes_json,
+            config=config,
+            variaveis_saida=variaveis_saida,
+            agregacoes_customizadas=agregacoes,
+        )
+        if sem_meta:
+            df = df.drop(columns=list(METADATA_COLUMNS), errors="ignore")
 
-    subject_ids = [int(subject_id_raw)] if str(subject_id_raw).strip() else None
-    agregacoes  = [
-        parse_agregacao_spec(line)
-        for line in agregacoes_raw.splitlines()
-        if line.strip()
-    ]
-    config = TransformConfig(
-        tamanho_janela_horas=24,
-        cortar_janelas_finais=cortar,
-        max_janelas=int(max_jan) if max_jan else None,
-        data_referencia=data_ref,
-    )
+        report_text = None
+        report_metricas = {}
+        ref_path = PROJECT_ROOT / "BASEPACIENTES21D_amostra_atualizado.csv"
+        if ref_path.exists():
+            ignored = set() if patient_info else NAO_COMPARAVEIS_SEM_PERFIL
+            report_text = comparar_com_referencia(df, ref_path, ignored_cols=ignored)
+            report_metricas = _parse_report(report_text)
 
-    try:
-        pacientes_json = converter_entradas_para_jsons(
+        preview_json = pacientes_json[0] if pacientes_json else {}
+        tabela_safe = json.loads(df.to_json(orient="records", default_handler=str))
+
+        return jsonify({
+            "n_pacientes":     len(pacientes_json),
+            "n_janelas":       sum(len(p.get("mapas_diarios") or []) for p in pacientes_json),
+            "n_colunas":       len(df.columns),
+            "pacientes_ids":   [int(p["patient_id"]) for p in pacientes_json],
+            "preview_json":    preview_json,
+            "tabela":          tabela_safe,
+            "colunas":         list(df.columns),
+            "report_texto":    report_text,
+            "report_metricas": report_metricas,
+            "perfil_ativo":    patient_info is not None,
+        })
+
+    @app.route("/api/paciente_json", methods=["POST"])
+    def paciente_json():
+        body = request.get_json(force=True)
+        pid  = int(body.get("subject_id"))
+        entradas = body.get("entradas_dir", str(PROJECT_ROOT / "entradas"))
+        patient_info = body.get("patient_info_file") or None
+        pacientes = converter_entradas_para_jsons(
             base_dir=PROJECT_ROOT,
-            entradas_dir=entradas_dir,
+            entradas_dir=entradas,
             patient_info_file=patient_info,
-            subject_ids=subject_ids,
+            subject_ids=[pid],
         )
-    except Exception as exc:
-        return jsonify({"erro": f"Erro ao carregar entradas: {exc}"}), 400
+        if not pacientes:
+            return jsonify({"erro": "Paciente nao encontrado."}), 404
+        return jsonify(pacientes[0])
 
-    if not pacientes_json:
-        return jsonify({"erro": "Nenhum paciente encontrado nos mapas diarios."}), 404
-
-    transformador = JsonTransformador()
-    df = transformador.transformar_varios_json(
-        pacientes_json,
-        config=config,
-        variaveis_saida=variaveis_saida,
-        agregacoes_customizadas=agregacoes,
-    )
-    if sem_meta:
-        df = df.drop(columns=list(METADATA_COLUMNS), errors="ignore")
-
-    # Validacao contra a amostra
-    report_text = None
-    report_metricas = {}
-    ref_path = PROJECT_ROOT / "BASEPACIENTES21D_amostra_atualizado.csv"
-    if ref_path.exists():
-        ignored = set() if patient_info else NAO_COMPARAVEIS_SEM_PERFIL
-        report_text = comparar_com_referencia(df, ref_path, ignored_cols=ignored)
-        report_metricas = _parse_report(report_text)
-
-    # Preview do JSON do primeiro paciente
-    preview_json = pacientes_json[0] if pacientes_json else {}
-
-    # NaN nao e JSON valido. pandas.to_json converte NaN → null corretamente.
-    import json as _json
-    tabela_safe = _json.loads(df.to_json(orient="records", default_handler=str))
-
-    return jsonify({
-        "n_pacientes":   len(pacientes_json),
-        "n_janelas":     sum(len(p.get("mapas_diarios") or []) for p in pacientes_json),
-        "n_colunas":     len(df.columns),
-        "pacientes_ids": [int(p["patient_id"]) for p in pacientes_json],
-        "preview_json":  preview_json,
-        "tabela":        tabela_safe,
-        "colunas":       list(df.columns),
-        "report_texto":  report_text,
-        "report_metricas": report_metricas,
-        "perfil_ativo":  patient_info is not None,
-    })
-
-
-@app.route("/api/paciente_json", methods=["POST"])
-def paciente_json():
-    """Retorna o JSON padronizado de um paciente especifico."""
-    body    = request.get_json(force=True)
-    pid     = int(body.get("subject_id"))
-    entradas = body.get("entradas_dir", str(PROJECT_ROOT / "entradas"))
-    patient_info = body.get("patient_info_file") or None
-
-    pacientes = converter_entradas_para_jsons(
-        base_dir=PROJECT_ROOT,
-        entradas_dir=entradas,
-        patient_info_file=patient_info,
-        subject_ids=[pid],
-    )
-    if not pacientes:
-        return jsonify({"erro": "Paciente nao encontrado."}), 404
-    return jsonify(pacientes[0])
+    return app
 
 
 def _parse_report(report: str) -> dict:
@@ -192,7 +201,6 @@ def _parse_report(report: str) -> dict:
                     metricas[key] = int(val)
                 except ValueError:
                     metricas[key] = val
-    # Linhas de diagnostico
     for label in ["Diagnostico", "Diferencas possivelmente ligadas a perfil/peso/sexo",
                   "Diferencas possivelmente ligadas a recorte/internacao",
                   "Diferencas em regras longitudinais a calibrar",
@@ -204,7 +212,8 @@ def _parse_report(report: str) -> dict:
 
 
 if __name__ == "__main__":
+    app = create_app()
     print("API Bloco 2 — Motor de Transformacao MIMIC-IV")
-    print(f"Raiz do projeto : {PROJECT_ROOT}")
-    print("Endereco        : http://localhost:5050")
+    print(f"Raiz do projeto: {PROJECT_ROOT}")
+    print("Endereco: http://localhost:5050")
     app.run(host="0.0.0.0", port=5050, debug=True)

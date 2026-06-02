@@ -1,0 +1,43 @@
+.info {
+  background: #eff6ff; border: 1px solid #bfdbfe;
+  border-radius: var(--radius); padding: 12px 16px;
+  font-size: 0.8rem; color: #1e40af;
+}
+
+.cards {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 12px; margin-bottom: 16px;
+}
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px; text-align: center;
+}
+.card.green { border-color: #a7f3d0; background: #f0fdf4; }
+.card.red   { border-color: #fecaca; background: #fff1f2; }
+.cardVal { font-size: 1.6rem; font-weight: 700; }
+.card.green .cardVal { color: var(--green); }
+.card.red   .cardVal { color: var(--red); }
+.cardLabel { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+
+.diagBlock {
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 4px solid var(--yellow);
+  border-radius: var(--radius); padding: 10px 14px;
+  margin-bottom: 8px; font-size: 0.78rem; line-height: 1.6;
+}
+.diagBlock strong { color: var(--text); }
+
+.rawWrap { margin-top: 12px; }
+.rawToggle {
+  background: none; border: none;
+  font-size: 0.76rem; color: var(--muted);
+  margin-bottom: 8px; padding: 0;
+}
+.rawToggle:hover { color: var(--text); }
+.raw {
+  background: #0f172a; color: #94a3b8;
+  border-radius: var(--radius); padding: 14px;
+  font-family: var(--mono); font-size: 0.7rem;
+  line-height: 1.5; overflow: auto; max-height: 200px;
+  white-space: pre-wrap;
+}
