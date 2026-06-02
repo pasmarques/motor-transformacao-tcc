@@ -134,7 +134,7 @@ def transform():
     # Validacao contra a amostra
     report_text = None
     report_metricas = {}
-    ref_path = PROJECT_ROOT / "BASEPACIENTES21D_ Amostra.csv"
+    ref_path = PROJECT_ROOT / "BASEPACIENTES21D_amostra_atualizado.csv"
     if ref_path.exists():
         ignored = set() if patient_info else NAO_COMPARAVEIS_SEM_PERFIL
         report_text = comparar_com_referencia(df, ref_path, ignored_cols=ignored)

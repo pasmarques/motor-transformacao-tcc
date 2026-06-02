@@ -49,25 +49,30 @@ class ModuloNutricao(BaseModule):
         kcal_kg = self._per_kg_col(windows, "calorias_kcal_kg_dia", kcal, weight)
         protein_kg = self._per_kg_col(windows, "proteinas_g_kg_dia", protein, weight)
 
+        # Alinhado com o SQL da professora: variaveis _4_7d retornam NULL
+        # quando daysinICU <= 8. Com cortar_janelas_finais=1, isso equivale
+        # a len(windows) <= 7.
+        null_4_7d = len(windows) <= 7
+
         return {
             "cInicioNutri": self._inicio((kcal > 0) | (protein > 0), days),
             "cInicioProteinas": self._inicio(protein > 0, days),
             "cInicioCalorias": self._inicio(kcal > 0, days),
             "nMediaKcalKgDia": self._mean_or_zero(kcal_kg),
             "nMediaKcalKgDia_3d": self._mean_nonzero(kcal_kg, days <= 3, null_if_empty=False),
-            "nMediaKcalKgDia_4_7d": self._mean_nonzero(kcal_kg, days.between(4, 7), null_if_empty=len(windows) <= 3),
+            "nMediaKcalKgDia_4_7d": np.nan if null_4_7d else self._mean_nonzero(kcal_kg, days.between(4, 7), null_if_empty=False),
             "nMediaKcalKgDia_7dmais": self._mean_nonzero(kcal_kg, days > 7, null_if_empty=len(windows) <= 7),
             "nMediaGKgDia": self._mean_or_zero(protein_kg),
             "nMediaGKgDia_3d": self._mean_nonzero(protein_kg, days <= 3, null_if_empty=False),
-            "nMediaGKgDia_4_7d": self._mean_nonzero(protein_kg, days.between(4, 7), null_if_empty=len(windows) <= 3),
+            "nMediaGKgDia_4_7d": np.nan if null_4_7d else self._mean_nonzero(protein_kg, days.between(4, 7), null_if_empty=False),
             "nMediaGKgDia_7dmais": self._mean_nonzero(protein_kg, days > 7, null_if_empty=len(windows) <= 7),
             "nPropDiasJejumProteina": float((protein <= 0).sum() / denominator),
             "nQtdeDiasJejumProteina_3d": int(((protein <= 0) & (days <= 3)).sum()),
-            "nQtdeDiasJejumProteina_4_7d": self._count_or_nan((protein <= 0) & days.between(4, 7), len(windows) <= 3),
+            "nQtdeDiasJejumProteina_4_7d": np.nan if null_4_7d else self._count_or_nan((protein <= 0) & days.between(4, 7), use_nan=False),
             "nPropDiasJejumProteina_7dmais": self._prop_or_nan((protein <= 0) & (days > 7), max(len(windows) - 7, 1), len(windows) <= 7),
             "nPropDiasJejumCalorias": float((kcal <= 0).sum() / denominator),
             "nQtdeDiasJejumCalorias_3d": int(((kcal <= 0) & (days <= 3)).sum()),
-            "nQtdeDiasJejumCalorias_4_7d": self._count_or_nan((kcal <= 0) & days.between(4, 7), len(windows) <= 3),
+            "nQtdeDiasJejumCalorias_4_7d": np.nan if null_4_7d else self._count_or_nan((kcal <= 0) & days.between(4, 7), use_nan=False),
             "nPropDiasJejumCalorias_7dmais": self._prop_or_nan((kcal <= 0) & (days > 7), max(len(windows) - 7, 1), len(windows) <= 7),
             "nPropDiasJejumTotal": float(((kcal <= 0) & (protein <= 0)).sum() / denominator),
         }

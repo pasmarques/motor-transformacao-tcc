@@ -11,6 +11,7 @@ from etl_motor.cleaning import DataCleaner
 from etl_motor.config import TransformConfig
 from etl_motor.modules import (
     ModuloBalancoHidrico,
+    ModuloCategorias,
     ModuloDrogasVasoativas,
     ModuloEvacuacao,
     ModuloHemodialise,
@@ -25,12 +26,10 @@ from etl_motor.orchestrator import OrquestradorETL
 from etl_motor.personalizacao import AggregationSpec, aplicar_personalizacao
 from etl_motor.plugin_loader import descobrir_plugins
 
-# Caminho padrao do arquivo de regras (raiz do projeto)
 _REGRAS_PATH = Path(__file__).resolve().parents[1] / "regras.json"
 
 
 def _load_regras(regras_path: Path | None = None) -> dict:
-    """Carrega o arquivo regras.json. Retorna dict vazio se nao encontrado."""
     path = regras_path or _REGRAS_PATH
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -49,13 +48,7 @@ class JsonTransformador:
         self._regras_plugins = regras.get("plugins", {})
         self._plugins = descobrir_plugins(plugins_dir=plugins_dir, regras=self._regras_plugins)
 
-    def transformar_json(
-        self,
-        paciente_json: dict[str, Any],
-        config: TransformConfig | None = None,
-        variaveis_saida: list[str] | None = None,
-        agregacoes_customizadas: list[AggregationSpec] | None = None,
-    ) -> dict[str, Any]:
+    def transformar_json(self, paciente_json, config=None, variaveis_saida=None, agregacoes_customizadas=None):
         config = self._resolve_config(paciente_json, config)
         subject_id = int(paciente_json["patient_id"])
 
@@ -75,6 +68,7 @@ class JsonTransformador:
             ModuloDrogasVasoativas(self._regras_dv),
             ModuloSinaisVitais(self._regras_sv),
             ModuloLaboratorio(self._regras_lab),
+            ModuloCategorias(),
         ]
 
         orchestrator = OrquestradorETL(
@@ -91,62 +85,37 @@ class JsonTransformador:
             agregacoes_customizadas=agregacoes_customizadas,
         )
 
-    def transformar_varios_json(
-        self,
-        pacientes_json: list[dict[str, Any]],
-        config: TransformConfig | None = None,
-        variaveis_saida: list[str] | None = None,
-        agregacoes_customizadas: list[AggregationSpec] | None = None,
-    ) -> pd.DataFrame:
-        """Transforma uma lista de pacientes JSON em tabela final."""
+    def transformar_varios_json(self, pacientes_json, config=None, variaveis_saida=None, agregacoes_customizadas=None):
         resultados = [
-            self.transformar_json(
-                paciente_json,
-                config=config,
-                variaveis_saida=variaveis_saida,
-                agregacoes_customizadas=agregacoes_customizadas,
-            )
-            for paciente_json in pacientes_json
+            self.transformar_json(p, config=config, variaveis_saida=variaveis_saida, agregacoes_customizadas=agregacoes_customizadas)
+            for p in pacientes_json
         ]
         return pd.DataFrame(resultados)
 
-    def gerar_auditoria_json(
-        self,
-        paciente_json: dict[str, Any],
-        config: TransformConfig | None = None,
-    ) -> str:
+    def gerar_auditoria_json(self, paciente_json, config=None):
         resultado = self.transformar_json(paciente_json, config)
         return pd.Series(resultado, name="valor").to_string()
 
-    def _resolve_config(
-        self,
-        paciente_json: dict[str, Any],
-        config: TransformConfig | None,
-    ) -> TransformConfig:
+    def _resolve_config(self, paciente_json, config):
         if config is not None:
             return config
-
         config_data = dict(paciente_json.get("configuracao_processamento") or {})
         if "data_referencia" not in config_data and paciente_json.get("data_referencia"):
             config_data["data_referencia"] = paciente_json["data_referencia"]
         return TransformConfig.from_dict(config_data)
 
-    def _patient_row(self, paciente_json: dict[str, Any], config: TransformConfig) -> dict[str, Any]:
+    def _patient_row(self, paciente_json, config):
         perfil = paciente_json.get("perfil") or {}
         internacao = paciente_json.get("internacao") or {}
         subject_id = int(paciente_json["patient_id"])
-
         idade = perfil.get("idade")
         if idade in (None, ""):
             idade = self._calculate_age(perfil.get("data_nascimento"), config.data_referencia_ts)
-
         imc = perfil.get("imc")
         if imc in (None, ""):
             imc = DataCleaner.calculate_bmi(perfil.get("peso_kg"), perfil.get("altura_cm"))
-
         data_obito = internacao.get("data_obito")
         denouement = 1 if data_obito not in (None, "") else 0
-
         return {
             "subject_id": subject_id,
             "gender": perfil.get("sexo"),
@@ -160,7 +129,7 @@ class JsonTransformador:
             "denouement": denouement,
         }
 
-    def _windows_df(self, paciente_json: dict[str, Any], subject_id: int) -> pd.DataFrame:
+    def _windows_df(self, paciente_json, subject_id):
         rows = []
         for mapa in paciente_json.get("mapas_diarios", []):
             start = pd.to_datetime(mapa.get("inicio"), errors="coerce")
@@ -181,21 +150,19 @@ class JsonTransformador:
             rows.append(row)
         return pd.DataFrame(rows)
 
-    def _balanco_hidrico_df(self, paciente_json: dict[str, Any], subject_id: int) -> pd.DataFrame:
+    def _balanco_hidrico_df(self, paciente_json, subject_id):
         rows = []
         for mapa in paciente_json.get("mapas_diarios", []):
             bh = mapa.get("balanco_hidrico") or {}
-            rows.append(
-                {
-                    "subject_id": subject_id,
-                    "day": mapa.get("dia") or mapa.get("indice_janela"),
-                    "start_time": mapa.get("inicio"),
-                    "BHDia": bh.get("saldo"),
-                }
-            )
+            rows.append({
+                "subject_id": subject_id,
+                "day": mapa.get("dia") or mapa.get("indice_janela"),
+                "start_time": mapa.get("inicio"),
+                "BHDia": bh.get("saldo"),
+            })
         return pd.DataFrame(rows, columns=["subject_id", "day", "start_time", "BHDia"])
 
-    def _evacuacao_events_df(self, paciente_json: dict[str, Any], subject_id: int) -> pd.DataFrame:
+    def _evacuacao_events_df(self, paciente_json, subject_id):
         rows = []
         for mapa in paciente_json.get("mapas_diarios", []):
             quantidade = int((mapa.get("evacuacao") or {}).get("quantidade") or 0)
@@ -203,16 +170,11 @@ class JsonTransformador:
             if pd.isna(start):
                 continue
             for index in range(quantidade):
-                rows.append(
-                    {
-                        "subject_id": subject_id,
-                        "event_time": start + pd.Timedelta(minutes=index),
-                    }
-                )
+                rows.append({"subject_id": subject_id, "event_time": start + pd.Timedelta(minutes=index)})
         return pd.DataFrame(rows, columns=["subject_id", "event_time"])
 
     @staticmethod
-    def _calculate_age(data_nascimento: Any, data_referencia: pd.Timestamp | None) -> float:
+    def _calculate_age(data_nascimento, data_referencia):
         birth = pd.to_datetime(data_nascimento, errors="coerce")
         if pd.isna(birth) or data_referencia is None:
             return np.nan
@@ -221,13 +183,13 @@ class JsonTransformador:
         return years if had_birthday else years - 1
 
     @staticmethod
-    def _diff_hours(start: pd.Timestamp, end: pd.Timestamp) -> float:
+    def _diff_hours(start, end):
         if pd.isna(start) or pd.isna(end):
             return np.nan
         return float((end - start) / pd.Timedelta(hours=1))
 
     @staticmethod
-    def _nutricao_cols(mapa: dict[str, Any]) -> dict[str, Any]:
+    def _nutricao_cols(mapa):
         nutricao = mapa.get("nutricao") or {}
         return {
             "calorias_kcal": nutricao.get("calorias_kcal", 0),
@@ -237,17 +199,17 @@ class JsonTransformador:
         }
 
     @staticmethod
-    def _ventilacao_cols(mapa: dict[str, Any]) -> dict[str, Any]:
+    def _ventilacao_cols(mapa):
         vm = mapa.get("ventilacao_mecanica") or {}
         return {"vm_em_uso": bool(vm.get("em_uso", False))}
 
     @staticmethod
-    def _hemodialise_cols(mapa: dict[str, Any]) -> dict[str, Any]:
+    def _hemodialise_cols(mapa):
         hemodialise = mapa.get("hemodialise") or {}
         return {"hemodialise_presente": bool(hemodialise.get("presente", False))}
 
     @staticmethod
-    def _drogas_cols(mapa: dict[str, Any]) -> dict[str, Any]:
+    def _drogas_cols(mapa):
         drogas = mapa.get("drogas_vasoativas") or {}
         nora = drogas.get("noradrenalina") or {}
         vaso = drogas.get("vasopressina") or {}
@@ -257,7 +219,7 @@ class JsonTransformador:
         }
 
     @staticmethod
-    def _sinais_cols(mapa: dict[str, Any]) -> dict[str, Any]:
+    def _sinais_cols(mapa):
         sinais = mapa.get("sinais_vitais") or {}
         return {
             "temperatura": sinais.get("temperatura", []),
@@ -268,7 +230,7 @@ class JsonTransformador:
         }
 
     @staticmethod
-    def _laboratorio_cols(mapa: dict[str, Any]) -> dict[str, Any]:
+    def _laboratorio_cols(mapa):
         laboratorio = mapa.get("laboratorio") or {}
         return {
             "ph": laboratorio.get("ph", []),

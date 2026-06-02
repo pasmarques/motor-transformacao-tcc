@@ -1,4 +1,5 @@
 from .balanco_hidrico import ModuloBalancoHidrico
+from .categorias import ModuloCategorias
 from .drogas_vasoativas import ModuloDrogasVasoativas
 from .evacuacao import ModuloEvacuacao
 from .hemodialise import ModuloHemodialise
@@ -11,6 +12,7 @@ from .ventilacao_mecanica import ModuloVentilacaoMecanica
 
 __all__ = [
     "ModuloBalancoHidrico",
+    "ModuloCategorias",
     "ModuloDrogasVasoativas",
     "ModuloEvacuacao",
     "ModuloHemodialise",
