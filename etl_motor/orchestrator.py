@@ -48,7 +48,7 @@ class OrquestradorETL:
 
         result: dict[str, Any] = {
             "idPaciente": int(subject_id),
-            "nDiasEmUTI": context.n_observation_days,
+            "nDiasEmUTI": context.dias_internacao,
             "nJanelasObservadas": context.n_observation_windows,
             "tamanhoJanelaHoras": context.window_size_hours,
             "DesfechoEmUTI": self._death_outcome(context.patient_row),
@@ -101,7 +101,7 @@ class OrquestradorETL:
         start_time = patient_row["intime_clean"]
         if pd.isna(start_time) and not patient_windows.empty:
             start_time = patient_windows["start_time_clean"].iloc[0]
-        cutoff_time, included_windows = self._resolve_cutoff(patient_row, patient_windows, config)
+        cutoff_time, included_windows, n_total_windows = self._resolve_cutoff(patient_row, patient_windows, config)
 
         return PatientContext(
             subject_id=subject_id,
@@ -110,6 +110,7 @@ class OrquestradorETL:
             start_time=start_time,
             cutoff_time=cutoff_time,
             n_observation_windows=len(included_windows),
+            n_total_windows=n_total_windows,
             config=config,
         )
 
@@ -118,11 +119,11 @@ class OrquestradorETL:
         patient_row: pd.Series,
         patient_windows: pd.DataFrame,
         config: TransformConfig,
-    ) -> tuple[pd.Timestamp, pd.DataFrame]:
+    ) -> tuple[pd.Timestamp, pd.DataFrame, int]:
         reference_time = config.data_referencia_ts
         if patient_windows.empty:
             cutoff = reference_time if reference_time is not None else patient_row["outtime_clean"]
-            return cutoff, patient_windows
+            return cutoff, patient_windows, 0
 
         candidate_windows = patient_windows.copy()
         if reference_time is not None:
@@ -132,6 +133,9 @@ class OrquestradorETL:
 
         if config.max_janelas is not None:
             candidate_windows = candidate_windows.iloc[: max(config.max_janelas, 0)].copy()
+
+        # Total de janelas ANTES do corte final — representa dias reais de internacao
+        n_total_windows = len(candidate_windows)
 
         if config.cortar_janelas_finais > 0:
             keep_windows = max(len(candidate_windows) - config.cortar_janelas_finais, 0)
@@ -144,7 +148,7 @@ class OrquestradorETL:
             cutoff = included["end_time_clean"].iloc[-1]
             if reference_time is not None:
                 cutoff = min(cutoff, reference_time)
-        return cutoff, included
+        return cutoff, included, n_total_windows
 
     @staticmethod
     def _resolve_config(

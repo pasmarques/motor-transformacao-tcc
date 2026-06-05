@@ -14,7 +14,7 @@ class ModuloInternacao(BaseModule):
     provides = ("cDiasEmUTI", "cDesfechoEmUTI")
 
     def transform(self, context: PatientContext) -> dict[str, Any]:
-        dias = context.n_observation_days
+        dias = context.dias_internacao
         return {
             "cDiasEmUTI": self._categoria_dias_uti(dias),
             "cDesfechoEmUTI": self._desfecho(context.patient_row),

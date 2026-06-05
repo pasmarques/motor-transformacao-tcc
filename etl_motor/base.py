@@ -17,6 +17,7 @@ class PatientContext:
     start_time: pd.Timestamp
     cutoff_time: pd.Timestamp
     n_observation_windows: int
+    n_total_windows: int
     config: TransformConfig
     features: dict[str, Any] = field(default_factory=dict)
 
@@ -26,8 +27,17 @@ class PatientContext:
 
     @property
     def n_observation_days(self) -> float:
-        """Equivalente em dias, preservando o comportamento atual para 24h."""
+        """Janelas processadas convertidas em dias (afetado por cortar_janelas_finais)."""
         return self.n_observation_windows * (self.window_size_hours / 24.0)
+
+    @property
+    def dias_internacao(self) -> float:
+        """Dias totais de internacao baseado no total de janelas antes do corte final.
+
+        Representa o tempo real de permanencia na UTI e nao e afetado por
+        cortar_janelas_finais, que e uma decisao de processamento, nao um fato clinico.
+        """
+        return self.n_total_windows * (self.window_size_hours / 24.0)
 
 
 class BaseModule(ABC):
@@ -36,7 +46,7 @@ class BaseModule(ABC):
     requires: tuple[str, ...] = ()
 
     def validate_dependencies(self, features: dict[str, Any]) -> None:
-        missing = [field for field in self.requires if field not in features]
+        missing = [f for f in self.requires if f not in features]
         if missing:
             raise ValueError(f"Modulo {self.name} requer variaveis ausentes: {missing}")
 
