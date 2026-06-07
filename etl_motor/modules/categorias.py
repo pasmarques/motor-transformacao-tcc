@@ -165,4 +165,4 @@ class ModuloCategorias(BaseModule):
             "cPropDiasWBCHiper":             _cat(f.get("nPropDiasWBCHiper")),
             "cPropDiasLactatoHiper":         _cat(f.get("nPropDiasLactatoHiper")),
             "cPropDiasPlaquetasHipo":        _cat(f.get("nPropDiasPlaquetasHipo")),
-      
+        }

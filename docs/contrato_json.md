@@ -1,7 +1,6 @@
 # Contrato JSON do Motor Transformador
 
-Este contrato representa a entrada oficial do Bloco 2. Cada arquivo JSON deve
-representar um paciente completo.
+Este contrato representa a entrada oficial do Bloco 2. Cada arquivo JSON representa um paciente completo.
 
 ## Estrutura principal
 
@@ -9,54 +8,113 @@ representar um paciente completo.
 {
   "patient_id": 11314855,
   "data_referencia": "2120-12-10T18:14:01",
-  "perfil": {},
-  "internacao": {},
-  "configuracao_processamento": {},
-  "mapas_diarios": []
+  "perfil": {
+    "gender": "M",
+    "anchor_age": 67,
+    "pesoadm": 80.0,
+    "alturacm": 175.0
+  },
+  "internacao": {
+    "data_admissao_uti": "2120-11-29T18:14:01",
+    "data_alta_uti": "2120-12-10T18:14:01",
+    "data_obito": null
+  },
+  "configuracao_processamento": {
+    "tamanho_janela_horas": 24,
+    "cortar_janelas_finais": 0,
+    "max_janelas": null,
+    "data_referencia": null
+  },
+  "mapas_diarios": [
+    {
+      "janela": 1,
+      "inicio": "2120-11-29T18:14:01",
+      "fim": "2120-11-30T18:14:01",
+      "balanco_hidrico": { "saldo": 450.0 },
+      "evacuacao": { "quantidade": 1 },
+      "nutricao": {
+        "calorias_kcal": 1200.0,
+        "proteinas_g": 60.0,
+        "calorias_kcal_kg_dia": 15.0,
+        "proteinas_g_kg_dia": 0.75
+      },
+      "drogas_vasoativas": {
+        "nora_dose_maxima": 0.0,
+        "vasopressina_em_uso": false
+      },
+      "ventilacao_mecanica": {
+        "vm_em_uso": true,
+        "desmame_iniciado": false
+      },
+      "sinais_vitais": {
+        "temperatura_maxima": 37.8,
+        "pas_media": 118.0,
+        "pad_media": 72.0,
+        "pam_media": 87.0
+      },
+      "hgt": { "valor_maximo": 145.0, "valor_minimo": 98.0 },
+      "hemodialise": { "em_uso": false },
+      "laboratorio": {
+        "albumina": 3.2,
+        "bilirrubina_total": 0.8,
+        "creatinina": 1.1,
+        "ureia": 38.0,
+        "hemoglobina": 10.5,
+        "linfocitos_totais": 1200.0,
+        "triglicerides": 180.0,
+        "potassio": 4.1,
+        "magnesio": 1.9,
+        "sodio": 138.0,
+        "fosforo": 3.0,
+        "ph": 7.38,
+        "lactato": 1.4,
+        "plaquetas": 210000.0,
+        "wbc": 9.5,
+        "ast": 32.0,
+        "alt": 28.0,
+        "fosfatase_alcalina": 85.0
+      }
+    }
+  ]
 }
 ```
 
-## Dados nao longitudinais
+## Perfil e internação
 
-`perfil` contem sexo, idade ou data de nascimento, peso, altura e IMC.
+`perfil` contém os dados não-longitudinais do paciente necessários para:
+- `pesoadm` + `alturacm`: calcular IMC (cFaixaIMC) e normalizar nutrição por kg (nMediaKcalKgDia, nMediaGKgDia)
+- `gender`: categorizar sexo (cSexo)
+- `anchor_age`: categorizar faixa etária (cFaixaEtaria)
 
-`internacao` contem data de admissao na UTI, data de alta e data de obito.
-Alta e obito podem ser nulos. Se `data_referencia` for informada, ela limita
-o periodo de observacao. Caso contrario, o motor usa a primeira data disponivel
-entre alta e obito.
+Quando `perfil` é nulo, as variáveis dependentes de peso retornam NaN e não são comparáveis com a base de referência.
 
-No adaptador do MVP, quando os mapas diarios nao trazem perfil/internacao, o
-JSON pode ser gerado com `perfil` nulo e com `internacao` inferida pelas janelas:
-`data_admissao_uti` usa o menor `inicio`, `data_referencia` usa o maior `fim`, e
-`data_alta_uti`/`data_obito` ficam nulos. Nesse modo, variaveis de perfil nao
-sao comparaveis com a base de amostra.
+`internacao` contém datas de admissão, alta e óbito. Se `data_referencia` estiver
+configurada, ela limita o período de observação independentemente da data de alta.
 
-Opcionalmente, o adaptador aceita uma tabela auxiliar de pacientes para simular
-campos que seriam entregues pelo Bloco 1. Essa tabela nao substitui o contrato:
-ela apenas preenche `perfil` e `internacao` antes da chamada ao Bloco 2.
+## Adaptador de entradas (fluxo principal)
 
-## Janelas de observacao
+O contrato é gerado automaticamente por `mapas_json.py` a partir de:
 
-O Bloco 1 deve criar as janelas. O Bloco 2 apenas recebe e respeita essas
-janelas.
+1. `entradas/ICUMapaDiario*.csv` — 30 arquivos, um por variável clínica
+2. `ICUpatients21D.csv` — perfil e internação dos pacientes
 
-`configuracao_processamento` aceita:
+O adaptador cruza os dois, monta o contrato JSON por paciente e entrega ao
+`OrquestradorETL` para transformação.
 
-- `tamanho_janela_horas`: tamanho da janela recebida. No MVP, o padrao e 24.
-- `cortar_janelas_finais`: remove N janelas finais.
-- `max_janelas`: usa apenas as primeiras N janelas.
-- `data_referencia`: limite temporal opcional.
+## Configuração de processamento
 
-No MVP, como as janelas sao de 24h, cortar uma janela final equivale a remover
-aproximadamente um dia. Na arquitetura final, se o Bloco 1 gerar janelas de 12h,
-cortar uma janela removera 12h.
+| Parâmetro | Tipo | Default | Descrição |
+|---|---|---|---|
+| `tamanho_janela_horas` | int | 24 | Tamanho de cada janela temporal em horas |
+| `cortar_janelas_finais` | int | 0 | Remove N janelas do final para cálculos clínicos |
+| `max_janelas` | int\|null | null | Usa apenas as primeiras N janelas |
+| `data_referencia` | str\|null | null | Limita o período de observação a uma data |
 
-## Dados longitudinais
+> `cortar_janelas_finais` é uma decisão de processamento — **não** afeta `nDiasEmUTI`,
+> que sempre usa o total de janelas antes do corte.
 
-`mapas_diarios` contem os dados organizados por janela. No MVP foram usados:
+## Fluxo alternativo (CLI)
 
-- `balanco_hidrico.saldo`
-- `evacuacao.quantidade`
-
-Novos modulos poderao consumir outros blocos, como nutricao, laboratorio, sinais
-vitais, ventilacao mecanica e drogas vasoativas.
+Para execução via `main.py --all`, o orquestrador pode receber `ICUNewWindow24.csv`
+(janelas consolidadas) diretamente, sem passar pelo adaptador de entradas.
+Este modo é mantido para compatibilidade mas não é usado pelo painel React.

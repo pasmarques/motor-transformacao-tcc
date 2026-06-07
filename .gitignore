@@ -56,3 +56,10 @@ BASEPACIENTES21D_COMPLETO.csv
 
 # VS Code Local History
 .history/
+
+# Documentos e dados nao-codigo
+*.pdf
+*.pptx
+*.xlsx
+BASEPACIENTES21D_ Amostra.csv
+ICUFBDiario*.csv

@@ -139,3 +139,19 @@ def _append_diagnostics(
     if ignored & NAO_COMPARAVEIS_SEM_PERFIL:
         lines.append(
             "Diagnostico: perfil/internacao ausente; variaveis diretas de perfil foram ignoradas."
+        )
+    if perfil:
+        lines.append(
+            "Diferencas possivelmente ligadas a perfil/peso/sexo: "
+            + ", ".join(perfil[:20])
+        )
+    if internacao:
+        lines.append(
+            "Diferencas possivelmente ligadas a recorte/internacao: "
+            + ", ".join(internacao[:20])
+        )
+    if longitudinais:
+        lines.append(
+            "Diferencas em regras longitudinais a calibrar: "
+            + ", ".join(longitudinais[:20])
+        )
