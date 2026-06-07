@@ -51,7 +51,16 @@ def comparar_com_referencia(
     reference_path: str | Path,
     ignored_cols: Iterable[str] | None = None,
 ) -> str:
-    expected = pd.read_csv(reference_path)
+    # Detecta separador decimal: se algum campo numerico vier como string com virgula,
+    # re-le com decimal=',' (formato BR/europeu da professora)
+    _raw = pd.read_csv(reference_path)
+    _sample = _raw.iloc[:, 1:].to_csv(index=False)
+    decimal = "," if ',"' not in _sample and ";" not in _sample and any(
+        isinstance(v, str) and "," in v
+        for col in _raw.columns
+        for v in _raw[col].dropna().head(5)
+    ) else "."
+    expected = _raw if decimal == "." else pd.read_csv(reference_path, decimal=",")
     ignored = set(ignored_cols or [])
     if "idPaciente" not in expected or "idPaciente" not in df_final:
         return "Comparacao ignorada: coluna idPaciente ausente."
@@ -130,19 +139,3 @@ def _append_diagnostics(
     if ignored & NAO_COMPARAVEIS_SEM_PERFIL:
         lines.append(
             "Diagnostico: perfil/internacao ausente; variaveis diretas de perfil foram ignoradas."
-        )
-    if perfil:
-        lines.append(
-            "Diferencas possivelmente ligadas a perfil/peso/sexo: "
-            + ", ".join(perfil[:20])
-        )
-    if internacao:
-        lines.append(
-            "Diferencas possivelmente ligadas a recorte/internacao: "
-            + ", ".join(internacao[:20])
-        )
-    if longitudinais:
-        lines.append(
-            "Diferencas em regras longitudinais a calibrar: "
-            + ", ".join(longitudinais[:20])
-        )

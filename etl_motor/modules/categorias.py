@@ -134,7 +134,7 @@ class ModuloCategorias(BaseModule):
             "cPropDiasBHPositivo":           _cat(f.get("nPropDiasBHPositivo")),
             "cPropDiasHGTHiper":             _cat(f.get("nPropDiasHGTHiper")),
             "cPropDiasHGTHipo":              _cat(f.get("nPropDiasHGTHipo")),
-            "cPropDiasSemUsoNora":           0 if (f.get("nPropDiasSemUsoNora") or 0) >= 1.0 else 1,
+            "cPropDiasSemUsoNora":           4 - _cat(f.get("nPropDiasSemUsoNora")),
             "cPropDiasNoraMax025":           _cat(f.get("nPropDiasNoraMax025")),
             "cPropDiasNoraMax050":           _cat(f.get("nPropDiasNoraMax050")),
             "cPropDiasNoraMax050Mais":       _cat(f.get("nPropDiasNoraMax050Mais")),
@@ -165,4 +165,4 @@ class ModuloCategorias(BaseModule):
             "cPropDiasWBCHiper":             _cat(f.get("nPropDiasWBCHiper")),
             "cPropDiasLactatoHiper":         _cat(f.get("nPropDiasLactatoHiper")),
             "cPropDiasPlaquetasHipo":        _cat(f.get("nPropDiasPlaquetasHipo")),
-        }
+      
