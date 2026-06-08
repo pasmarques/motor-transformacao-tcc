@@ -9,6 +9,9 @@ admin-panel/node_modules
 user-panel/node_modules
 admin-panel/dist
 user-panel/dist
-*.csv
+# CSVs que NAO vao para o container:
+BASEPACIENTES21D_COMPLETO.csv
+ICUNewWindow24.csv
+dataset_transformado.csv
 nginx/ssl
 .env
