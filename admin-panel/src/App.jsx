@@ -17,7 +17,7 @@ export default function App() {
   const [autenticado, setAutenticado] = useState(!!getAccessToken())
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/painel">
       <Routes>
         <Route path="/login" element={<Login onLogin={() => setAutenticado(true)} />} />
         <Route
