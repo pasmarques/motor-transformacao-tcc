@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import Resultado from './pages/Resultado'
 import Validacao from './pages/Validacao'
@@ -9,6 +9,18 @@ export default function App() {
   const [estado, setEstado] = useState(null)
   const [aba, setAba] = useState('resultado')
   const [executando, setExecutando] = useState(false)
+  const [bloco1Aberto, setBloco1Aberto] = useState(false)
+  const bloco1Ref = useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (bloco1Ref.current && !bloco1Ref.current.contains(e.target)) {
+        setBloco1Aberto(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   return (
     <div className={styles.shell}>
@@ -21,6 +33,28 @@ export default function App() {
         {/* Topbar */}
         <div className={styles.topbar}>
           <div className={styles.pipeline}>
+            {/* Bloco 1 — previsto para desenvolvimento futuro */}
+            <div className={styles.bloco1Wrapper} ref={bloco1Ref}>
+              <span
+                className={`${styles.step} ${styles.stepFuturo}`}
+                onClick={() => setBloco1Aberto(v => !v)}
+                title="Clique para saber mais"
+              >
+                Bloco 1
+              </span>
+              {bloco1Aberto && (
+                <div className={styles.bloco1Tooltip}>
+                  <strong>Bloco 1 — Em desenvolvimento</strong>
+                  <p>
+                    Na arquitetura completa, o Bloco 1 será responsável pela extração
+                    e janelamento dos dados diretamente do MIMIC-IV, entregando o JSON
+                    padronizado ao SPRC. No protótipo atual, essa etapa é simulada
+                    pelo adaptador de entrada CSV.
+                  </p>
+                </div>
+              )}
+            </div>
+            <span className={styles.arrow}>→</span>
             <span className={styles.step}>Entradas CSV</span>
             <span className={styles.arrow}>→</span>
             <span className={styles.step}>Adaptador JSON</span>

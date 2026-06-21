@@ -18,6 +18,38 @@
   background: #f1f5f9; color: #94a3b8;
 }
 .stepActive { background: #dbeafe; color: #1d4ed8; }
+.stepFuturo {
+  background: transparent;
+  color: #94a3b8;
+  border: 1.5px dashed #cbd5e1;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.stepFuturo:hover { color: #64748b; border-color: #94a3b8; }
+
+.bloco1Wrapper { position: relative; }
+.bloco1Tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 100;
+  background: #1e293b;
+  color: #f1f5f9;
+  border-radius: 8px;
+  padding: 12px 14px;
+  width: 280px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+.bloco1Tooltip strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+  color: #93c5fd;
+}
+.bloco1Tooltip p { margin: 0; }
+
 .arrow { color: #d1d5db; font-size: 0.8rem; }
 
 .badge {
