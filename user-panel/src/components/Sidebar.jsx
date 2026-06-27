@@ -76,7 +76,7 @@ export default function Sidebar({ executando, setExecutando, onResultado }) {
     <aside className={styles.sidebar}>
       <div className={styles.header}>
         <h1 className={styles.title}>Motor de Transformação<br />MIMIC-IV</h1>
-        <span className={styles.badge}>Bloco 2</span>
+        <span className={styles.badge}>SPRC</span>
       </div>
 
       {/* Plugins ativos */}
@@ -195,7 +195,7 @@ export default function Sidebar({ executando, setExecutando, onResultado }) {
           : '▶ Executar Transformação'}
       </button>
 
-      <p className={styles.hint}>Frontend React → API Flask (5050)<br />→ Motor Python (Bloco 2)</p>
+      <p className={styles.hint}>Frontend React → API Flask (5050)<br />→ SPRC</p>
     </aside>
   )
 }
