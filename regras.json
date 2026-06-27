@@ -1,5 +1,5 @@
 {
-  "_descricao": "Regras clinicas do motor de transformacao MIMIC-IV. Altere os valores sem modificar o codigo.",
+  "_descricao": "Regras clinicas do SPRC. Altere os valores sem modificar o codigo.",
   "laboratorio": {
     "ph_upper": 7.45,
     "ph_lower": 7.35,
