@@ -36,7 +36,7 @@ export default function Login({ onLogin }) {
     <div className={styles.page}>
       <form className={styles.card} onSubmit={handleSubmit}>
         <div className={styles.icon}>⚙️</div>
-        <h1 className={styles.title}>Motor MIMIC-IV</h1>
+        <h1 className={styles.title}>SPRC — MIMIC-IV</h1>
         <p className={styles.subtitle}>Painel Administrativo</p>
 
         <div className={styles.field}>
