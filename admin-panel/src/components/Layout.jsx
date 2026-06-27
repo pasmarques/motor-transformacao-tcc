@@ -18,7 +18,7 @@ export default function Layout({ onLogout }) {
         <div className={styles.logo}>
           <span className={styles.logoIcon}>⚙️</span>
           <div>
-            <div className={styles.logoTitle}>Motor MIMIC-IV</div>
+            <div className={styles.logoTitle}>SPRC — MIMIC-IV</div>
             <div className={styles.logoBadge}>Painel Admin</div>
           </div>
         </div>
