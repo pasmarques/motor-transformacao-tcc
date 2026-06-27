@@ -33,23 +33,23 @@ export default function App() {
         {/* Topbar */}
         <div className={styles.topbar}>
           <div className={styles.pipeline}>
-            {/* Bloco 1 — previsto para desenvolvimento futuro */}
+            {/* MEP — previsto para desenvolvimento futuro */}
             <div className={styles.bloco1Wrapper} ref={bloco1Ref}>
               <span
                 className={`${styles.step} ${styles.stepFuturo}`}
                 onClick={() => setBloco1Aberto(v => !v)}
                 title="Clique para saber mais"
               >
-                Bloco 1
+                MEP
               </span>
               {bloco1Aberto && (
                 <div className={styles.bloco1Tooltip}>
-                  <strong>Bloco 1 — Em desenvolvimento</strong>
+                  <strong>MEP — Em desenvolvimento</strong>
                   <p>
-                    Na arquitetura completa, o Bloco 1 será responsável pela extração
-                    e janelamento dos dados diretamente do MIMIC-IV, entregando o JSON
-                    padronizado ao SPRC. No protótipo atual, essa etapa é simulada
-                    pelo adaptador de entrada CSV.
+                    Na arquitetura completa, o MEP (Módulo de Extração e Padronização)
+                    será responsável pela extração e janelamento dos dados diretamente
+                    do MIMIC-IV, entregando o JSON padronizado ao SPRC. No protótipo
+                    atual, essa etapa é simulada pelo adaptador de entrada CSV.
                   </p>
                 </div>
               )}
@@ -59,7 +59,7 @@ export default function App() {
             <span className={styles.arrow}>→</span>
             <span className={styles.step}>Adaptador JSON</span>
             <span className={styles.arrow}>→</span>
-            <span className={`${styles.step} ${styles.stepActive}`}>Bloco 2</span>
+            <span className={`${styles.step} ${styles.stepActive}`}>SPRC</span>
             <span className={styles.arrow}>→</span>
             <span className={styles.step}>Saída</span>
             <span className={styles.arrow}>→</span>
@@ -101,6 +101,3 @@ export default function App() {
           )}
         </div>
       </div>
-    </div>
-  )
-}
