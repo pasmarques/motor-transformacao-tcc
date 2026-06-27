@@ -110,7 +110,7 @@ export default function Sidebar({ executando, setExecutando, onResultado }) {
       <div className={styles.section}>
         <div className={styles.groupLabel}>Perfil &amp; Internação</div>
         <div className={styles.radioGroup}>
-          <label><input type="radio" checked={perfilMode === 'mock'} onChange={() => setPerfilMode('mock')} /> Com mock do Bloco 1</label>
+          <label><input type="radio" checked={perfilMode === 'mock'} onChange={() => setPerfilMode('mock')} /> Com mock do MEP</label>
           <label><input type="radio" checked={perfilMode === 'sem'} onChange={() => setPerfilMode('sem')} /> Sem perfil</label>
         </div>
         {perfilMode === 'mock' && (

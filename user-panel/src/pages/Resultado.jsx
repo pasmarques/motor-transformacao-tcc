@@ -31,7 +31,7 @@ export default function Resultado({ estado }) {
           ['Pacientes', n_pacientes, 'transformados'],
           ['Janelas', n_janelas, 'observadas'],
           ['Colunas', n_colunas, 'variáveis geradas'],
-          ['Perfil', perfil_ativo ? 'mock ativo' : 'ausente', 'Bloco 1'],
+          ['Perfil', perfil_ativo ? 'mock ativo' : 'ausente', 'MEP'],
         ].map(([label, value, sub]) => (
           <div key={label} className={styles.metricCard}>
             <div className={styles.metricLabel}>{label}</div>
